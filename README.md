@@ -80,6 +80,41 @@ Agar Gitea dan SSH host/container dapat diakses secara publik melalui Cloudflare
 
 ---
 
+## 🔒 Konfigurasi SSH Client (Akses SSH lewat Cloudflare Tunnel)
+Karena traffic SSH dilewatkan melalui Cloudflare Tunnel, komputer client (PC Anda) yang ingin melakukan koneksi SSH ke Host OS maupun melakukan `git clone/push` lewat SSH Gitea harus terintegrasi dengan client-side `cloudflared`.
+
+### 1. Download & Install `cloudflared` di Client:
+- **Windows**: Download berkas `.exe` dari [Cloudflare GitHub Releases](https://github.com/cloudflare/cloudflared/releases) atau instal via winget: `winget install cloudflare.cloudflared`. Jika menggunakan installer `.msi`, letak default aplikasinya berada di `C:\Program Files\cloudflared\cloudflared.exe`. Pastikan direktori ini sudah masuk dalam `PATH` environment variable sistem Anda.
+- **Linux**: Pasang paket resmi `cloudflared` sesuai distro Anda (misal `apt install cloudflared`).
+- **macOS**: Instal melalui Homebrew: `brew install cloudflare/cloudflare/cloudflared`.
+
+### 2. Tambahkan Konfigurasi ke file SSH `config` Client:
+Buka berkas konfigurasi SSH di komputer client Anda (terletak di `~/.ssh/config` untuk Linux/macOS, atau `C:\Users\<Username>\.ssh\config` untuk Windows). Tambahkan konfigurasi berikut:
+
+#### Opsi A: Menggunakan Command Global (Direkomendasikan untuk Windows/Linux/macOS jika `cloudflared` ada di PATH)
+```ssh
+Host ssh.<DOMAIN>
+    User %r
+    ProxyCommand cloudflared access ssh --hostname %h
+
+Host git-ssh.<DOMAIN>
+    ProxyCommand cloudflared access ssh --hostname %h
+```
+
+#### Opsi B: Menggunakan Absolute Path (Khusus Windows jika tidak mendaftarkan cloudflared ke PATH)
+```ssh
+Host ssh.<DOMAIN>
+    User %r
+    ProxyCommand "C:\Program Files\cloudflared\cloudflared.exe" access ssh --hostname %h
+
+Host git-ssh.<DOMAIN>
+    ProxyCommand "C:\Program Files\cloudflared\cloudflared.exe" access ssh --hostname %h
+```
+
+> *Ganti `<DOMAIN>` dengan nama domain yang Anda definisikan di berkas `.env` (contoh: `rplcraft.my.id`).*
+
+---
+
 ## ⚙️ Konfigurasi Gitea (`app.ini`)
 Setelah mendeploy Cloudflared Tunnel, Anda perlu menyesuaikan konfigurasi URL dan SSH internal Gitea agar tautan clone yang tampil di web menggunakan domain kustom Anda.
 
