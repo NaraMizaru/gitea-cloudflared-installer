@@ -13,4 +13,16 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "Running as root"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+
+echo "[1/2] Installing Docker"
+bash "$SCRIPT_DIR/scripts/install-docker.sh"
+
+
+echo "[2/2] Setup directory"
+bash "$SCRIPT_DIR/scripts/setup-directory.sh"
+
+echo ""
+echo "[3/3] Setup Docker network"
+bash "$SCRIPT_DIR/scripts/setup-network.sh"
