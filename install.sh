@@ -1,18 +1,20 @@
 #!/bin/bash
 
 set -e
+MODE=${1:-all}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/config.env"
+CONFIG_FILE="$SCRIPT_DIR/.env"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Missing config.env"
+    echo "Missing .env file"
     echo "copy .env.example menjadi .env dulu"
     exit 1
 fi
 
+set -a
 source "$CONFIG_FILE"
-
+set +a
 
 echo "================================="
 echo " Gitea + Cloudflared Installer"
@@ -33,25 +35,35 @@ echo ""
 echo "[3] Setup Docker network"
 bash "$SCRIPT_DIR/scripts/setup-network.sh"
 
-echo ""
-echo "[4] Deploy Gitea"
-bash "$SCRIPT_DIR/scripts/deploy-gitea.sh"
+if [ "$MODE" = "all" ] || [ "$MODE" = "gitea" ]; then
+    echo ""
+    echo "[4] Deploy Gitea"
+    bash "$SCRIPT_DIR/scripts/deploy-gitea.sh"
+fi
 
-echo ""
-echo "[5] Deploy Runner"
-bash "$SCRIPT_DIR/scripts/deploy-runner.sh"
+if [ "$MODE" = "all" ] || [ "$MODE" = "runner" ]; then
+    echo ""
+    echo "[5] Deploy Runner"
+    bash "$SCRIPT_DIR/scripts/deploy-runner.sh"
+fi
 
-echo ""
-echo "[6] Deploy Nginx"
-bash "$SCRIPT_DIR/scripts/deploy-nginx.sh"
+if [ "$MODE" = "all" ] || [ "$MODE" = "proxy" ]; then
+    echo ""
+    echo "[6] Deploy Nginx"
+    bash "$SCRIPT_DIR/scripts/deploy-nginx.sh"
+fi
 
-echo ""
-echo "[7] Deploy Cloudflared"
-bash "$SCRIPT_DIR/scripts/deploy-cloudflared.sh"
+if [ "$MODE" = "all" ] || [ "$MODE" = "tunnel" ]; then
+    echo ""
+    echo "[7] Deploy Cloudflared"
+    bash "$SCRIPT_DIR/scripts/deploy-cloudflared.sh"
+fi
 
-echo ""
-echo "[8] Install Backup"
-bash "$SCRIPT_DIR/scripts/install-backup.sh"
+if [ "$MODE" = "all" ]; then
+    echo ""
+    echo "[8] Install Backup"
+    bash "$SCRIPT_DIR/scripts/install-backup.sh"
+fi
 
 echo ""
 echo "Base server setup complete!"
