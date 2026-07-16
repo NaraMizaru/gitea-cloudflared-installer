@@ -27,7 +27,8 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 .
 ├── .env.example            # Template konfigurasi environment
 ├── README.md               # Panduan penggunaan (dokumentasi)
-├── install.sh              # Skrip utama (installer) untuk memulai deployment
+├── install.sh              # Skrip utama (installer) dengan loading spinner UI
+├── install.log             # [Dibuat saat runtime] Berkas log detail proses instalasi
 ├── compose/                # Konfigurasi Docker Compose & template internal
 │   ├── cloudflared/
 │   ├── gitea/
@@ -63,9 +64,9 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
 1. Jalankan instalasi untuk mendeploy seluruh stack utama:
    ```bash
    bash install.sh
-   # atau bash install.sh all
+   # atau bash install.sh --all
    ```
-   *Skrip akan memasang Docker, menyiapkan folder data, membuat docker network, lalu mendeploy database PostgreSQL, Gitea, Nginx, Cloudflared Tunnel, dan Backup Cron.*
+   *Skrip akan memasang Docker, menyiapkan folder data, membuat docker network, lalu mendeploy database PostgreSQL, Gitea, Nginx, Cloudflared Tunnel, dan Backup Cron. Anda juga bisa melihat seluruh opsi bantuan parameter dengan menjalankan `bash install.sh --help`.*
 
 2. Buka browser Anda dan akses Gitea (misalnya lewat domain `git.<DOMAIN>` yang sudah terhubung Cloudflare Tunnel, atau lokal IP di port `3000`).
 3. Selesaikan form instalasi Gitea di browser (buat akun Administrator pertama Anda).
@@ -83,7 +84,7 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
    ```
 6. Jalankan deployment khusus untuk mengaktifkan **Gitea Runner**:
    ```bash
-   bash install.sh runner
+   bash install.sh --runner
    ```
 
 ---
