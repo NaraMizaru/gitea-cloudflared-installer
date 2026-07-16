@@ -50,4 +50,8 @@ echo "[7] Deploy Cloudflared"
 bash "$SCRIPT_DIR/scripts/deploy-cloudflared.sh"
 
 echo ""
+echo "[8] Install Backup"
+bash "$SCRIPT_DIR/scripts/install-backup.sh"
+
+echo ""
 echo "Base server setup complete!"
