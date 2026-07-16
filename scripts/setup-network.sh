@@ -2,23 +2,21 @@
 
 set -e
 
-NETWORK_NAME="git-network"
-SUBNET="172.19.0.0/16"
 
-echo "=== Setting Docker Network ==="
+echo "Checking Docker network..."
 
-
-if docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}$"
+if docker network ls \
+    --format "{{.Name}}" \
+    | grep -q "^${DOCKER_NETWORK}$"
 then
-    echo "Network ${NETWORK_NAME} already exists"
-    exit 0
+    echo "Network ${DOCKER_NETWORK} already exists"
+else
+    echo "Creating ${DOCKER_NETWORK}"
+
+    docker network create \
+        --driver bridge \
+        --subnet ${DOCKER_SUBNET} \
+        ${DOCKER_NETWORK}
 fi
 
-
-docker network create \
-    --driver bridge \
-    --subnet ${SUBNET} \
-    ${NETWORK_NAME}
-
-
-echo "Network ${NETWORK_NAME} created"
+echo "Docker network ready"

@@ -2,27 +2,41 @@
 
 set -e
 
-APP_NAME="Gitea + Cloudflared Installer"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$SCRIPT_DIR/config.env"
 
-echo "================================="
-echo "$APP_NAME"
-echo "================================="
-
-if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Missing config.env"
+    echo "copy config.env.example menjadi config.env dulu"
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$CONFIG_FILE"
 
 
-echo "[1/2] Installing Docker"
+echo "================================="
+echo " Gitea + Cloudflared Installer"
+echo "================================="
+
+
+echo ""
+echo "[1/4] Install Docker"
 bash "$SCRIPT_DIR/scripts/install-docker.sh"
 
 
-echo "[2/2] Setup directory"
+echo ""
+echo "[2/3] Setup directories"
 bash "$SCRIPT_DIR/scripts/setup-directory.sh"
 
+
 echo ""
-echo "[3/3] Setup Docker network"
+echo "[3/4] Setup Docker network"
 bash "$SCRIPT_DIR/scripts/setup-network.sh"
+
+echo ""
+echo "[4/4] Deploy Gitea"
+bash "$SCRIPT_DIR/scripts/deploy-gitea.sh"
+
+
+echo ""
+echo "Base server setup complete!"
