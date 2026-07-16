@@ -2,7 +2,6 @@
 
 set -e
 
-
 echo "Checking configuration..."
 
 REQUIRED_VARS=(

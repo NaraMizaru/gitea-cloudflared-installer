@@ -2,7 +2,6 @@
 
 set -e
 
-
 echo "Creating server directories..."
 
 mkdir -p /opt/stacks/{gitea,runner,nginx,cloudflared}

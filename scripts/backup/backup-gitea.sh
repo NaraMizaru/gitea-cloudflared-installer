@@ -2,7 +2,6 @@
 
 set -e
 
-
 # Load configuration if available
 CONFIG_FILE="/opt/stacks/gitea/.env"
 if [ -f "$CONFIG_FILE" ]; then

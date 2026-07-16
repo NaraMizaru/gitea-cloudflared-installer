@@ -2,7 +2,6 @@
 
 set -e
 
-
 echo "Checking Docker installation..."
 
 if command -v docker >/dev/null 2>&1

@@ -21,6 +21,27 @@ Secara default, installer akan membuat struktur folder persisten berikut di serv
 
 ---
 
+## 📁 Struktur Repositori
+Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modular:
+```text
+.
+├── .env.example            # Template konfigurasi environment
+├── README.md               # Panduan penggunaan (dokumentasi)
+├── install.sh              # Skrip utama (installer) untuk memulai deployment
+├── compose/                # Konfigurasi Docker Compose & template internal
+│   ├── cloudflared/
+│   ├── gitea/
+│   ├── nginx/
+│   └── runner/
+└── scripts/                # Kumpulan skrip otomasi yang dikelompokkan
+    ├── backup/             # Skrip setup & eksekusi backup otomatis
+    ├── deploy/             # Skrip untuk mendeploy kontainer masing-masing service
+    ├── setup/              # Skrip persiapan system (Docker, folder, network)
+    └── utils/              # Skrip utilitas pembantu (validasi konfigurasi)
+```
+
+---
+
 ## 🛠️ Langkah-Langkah Instalasi & Setup
 
 ### Langkah 1: Persiapan Environment

@@ -2,7 +2,6 @@
 
 set -e
 
-
 echo "Checking Docker network..."
 
 if docker network ls \

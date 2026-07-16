@@ -4,7 +4,9 @@ set -e
 
 echo "Installing backup script"
 
-cp scripts/backup-gitea.sh \
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+cp "$SCRIPT_DIR/backup-gitea.sh" \
 /usr/local/bin/backup-gitea.sh
 
 chmod +x \
