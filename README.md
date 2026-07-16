@@ -36,32 +36,33 @@ Secara default, installer akan membuat struktur folder persisten berikut di serv
 
 ---
 
-### Langkah 2: Deploy Gitea (Inisialisasi)
-Karena Gitea Runner memerlukan token registrasi yang hanya bisa didapatkan setelah Gitea terpasang dan dikonfigurasi, jalankan installer secara bertahap.
+### Langkah 2: Inisialisasi Stack Utama
+Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan instalasi untuk seluruh komponen utama terlebih dahulu. Skrip secara otomatis akan melewatkan (skip) instalasi Runner karena `RUNNER_TOKEN` masih kosong.
 
-1. Jalankan instalasi untuk komponen **gitea** saja:
+1. Jalankan instalasi untuk mendeploy seluruh stack utama:
    ```bash
-   bash install.sh gitea
+   bash install.sh
+   # atau bash install.sh all
    ```
-   *Skrip akan memasang Docker (jika belum terpasang), menyiapkan folder data, membuat docker network, lalu mendeploy database PostgreSQL & Gitea.*
+   *Skrip akan memasang Docker, menyiapkan folder data, membuat docker network, lalu mendeploy database PostgreSQL, Gitea, Nginx, Cloudflared Tunnel, dan Backup Cron.*
 
-2. Buka browser Anda dan akses Gitea secara lokal melalui alamat IP server di port HTTP yang dikonfigurasi (default: `http://<IP_SERVER_ANDA>:3000`).
+2. Buka browser Anda dan akses Gitea (misalnya lewat domain `git.<DOMAIN>` yang sudah terhubung Cloudflare Tunnel, atau lokal IP di port `3000`).
 3. Selesaikan form instalasi Gitea di browser (buat akun Administrator pertama Anda).
 
 ---
 
-### Langkah 3: Mengambil Token Runner & Deploy Ulang
+### Langkah 3: Mengambil Token Runner & Deploy Runner
 1. Masuk ke akun Admin Gitea Anda di web browser.
 2. Navigasikan ke **Site Administration (Administrasi Situs)** -> **Actions** -> **Runners**.
 3. Klik tombol **Register runner** di pojok kanan atas.
 4. Salin token registrasi yang muncul (Registration Token).
-5. Buka kembali berkas `.env` di server Anda, lalu paste token tersebut pada variabel:
+5. Buka kembali berkas `.env` di server Anda, lalu isi token tersebut pada variabel:
    ```env
    RUNNER_TOKEN=KODE_TOKEN_YANG_ANDA_SALIN
    ```
-6. Deploy sisa stack secara keseluruhan untuk mengaktifkan Runner, Nginx, Cloudflared Tunnel, dan Backup Scheduler:
+6. Jalankan deployment khusus untuk mengaktifkan **Gitea Runner**:
    ```bash
-   bash install.sh all
+   bash install.sh runner
    ```
 
 ---
