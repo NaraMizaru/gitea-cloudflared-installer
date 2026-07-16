@@ -7,7 +7,7 @@ CONFIG_FILE="$SCRIPT_DIR/config.env"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Missing config.env"
-    echo "copy config.env.example menjadi config.env dulu"
+    echo "copy .env.example menjadi .env dulu"
     exit 1
 fi
 
@@ -44,6 +44,10 @@ bash "$SCRIPT_DIR/scripts/deploy-runner.sh"
 echo ""
 echo "[6] Deploy Nginx"
 bash "$SCRIPT_DIR/scripts/deploy-nginx.sh"
+
+echo ""
+echo "[7] Deploy Cloudflared"
+bash "$SCRIPT_DIR/scripts/deploy-cloudflared.sh"
 
 echo ""
 echo "Base server setup complete!"
