@@ -61,15 +61,21 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 ### Langkah 2: Inisialisasi Stack Utama
 Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan instalasi untuk seluruh komponen utama terlebih dahulu. Skrip secara otomatis akan melewatkan (skip) instalasi Runner karena `RUNNER_TOKEN` masih kosong.
 
-1. Jalankan instalasi untuk mendeploy seluruh stack utama:
+1. Atur hak akses eksekusi (executable permission) pada file utama installer dan seluruh skrip otomasi:
    ```bash
-   bash install.sh
-   # atau bash install.sh --all
+   chmod +x install.sh
+   chmod -R +x scripts/
    ```
-   *Skrip akan memasang Docker, menyiapkan folder data, membuat docker network, lalu mendeploy database PostgreSQL, Gitea, Nginx, Cloudflared Tunnel, dan Backup Cron. Anda juga bisa melihat seluruh opsi bantuan parameter dengan menjalankan `bash install.sh --help`.*
 
-2. Buka browser Anda dan akses Gitea (misalnya lewat domain `git.<DOMAIN>` yang sudah terhubung Cloudflare Tunnel, atau lokal IP di port `3000`).
-3. Selesaikan form instalasi Gitea di browser (buat akun Administrator pertama Anda).
+2. Jalankan instalasi untuk mendeploy seluruh stack utama:
+   ```bash
+   ./install.sh
+   # atau ./install.sh --all
+   ```
+   *Skrip akan memasang Docker, menyiapkan folder data, membuat docker network, lalu mendeploy database PostgreSQL, Gitea, Nginx, Cloudflared Tunnel, dan Backup Cron. Anda juga bisa melihat seluruh opsi bantuan parameter dengan menjalankan `./install.sh --help`.*
+
+3. Buka browser Anda dan akses Gitea (misalnya lewat domain `git.<DOMAIN>` yang sudah terhubung Cloudflare Tunnel, atau lokal IP di port `3000`).
+4. Selesaikan form instalasi Gitea di browser (buat akun Administrator pertama Anda).
 
 ---
 
@@ -84,7 +90,7 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
    ```
 6. Jalankan deployment khusus untuk mengaktifkan **Gitea Runner**:
    ```bash
-   bash install.sh --runner
+   ./install.sh --runner
    ```
 
 ---
