@@ -20,22 +20,26 @@ echo "================================="
 
 
 echo ""
-echo "[1/4] Install Docker"
+echo "[1] Install Docker"
 bash "$SCRIPT_DIR/scripts/install-docker.sh"
 
 
 echo ""
-echo "[2/3] Setup directories"
+echo "[2] Setup directories"
 bash "$SCRIPT_DIR/scripts/setup-directory.sh"
 
 
 echo ""
-echo "[3/4] Setup Docker network"
+echo "[3] Setup Docker network"
 bash "$SCRIPT_DIR/scripts/setup-network.sh"
 
 echo ""
-echo "[4/4] Deploy Gitea"
+echo "[4] Deploy Gitea"
 bash "$SCRIPT_DIR/scripts/deploy-gitea.sh"
+
+echo ""
+echo "[5] Deploy Runner"
+bash "$SCRIPT_DIR/scripts/deploy-runner.sh"
 
 
 echo ""
