@@ -49,9 +49,11 @@ systemctl start docker
 
 echo "Add current user to docker group"
 
-if ! groups $SUDO_USER | grep -q docker
-then
-    usermod -aG docker $SUDO_USER
+if [ -n "$SUDO_USER" ]; then
+    if ! groups $SUDO_USER | grep -q docker
+    then
+        usermod -aG docker $SUDO_USER
+    fi
 fi
 
 echo "Docker installation finished"

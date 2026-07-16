@@ -12,8 +12,11 @@ chmod +x \
 
 echo "Setting cron"
 
-(crontab -l 2>/dev/null; \
-echo "$BACKUP_SCHEDULE BACKUP_DIR=$BACKUP_DIR BACKUP_RETENTION_DAYS=$BACKUP_RETENTION_DAYS /usr/local/bin/backup-gitea.sh") \
-| crontab -
+CRON_JOB="$BACKUP_SCHEDULE /usr/local/bin/backup-gitea.sh"
+if crontab -l 2>/dev/null | grep -q "/usr/local/bin/backup-gitea.sh"; then
+    (crontab -l 2>/dev/null | grep -v "/usr/local/bin/backup-gitea.sh"; echo "$CRON_JOB") | crontab -
+else
+    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+fi
 
 echo "Backup script installed"

@@ -4,7 +4,7 @@ set -e
 
 
 echo "Checking Cloudflare Tunnel configuration..."
-if [ -z "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+if [ -z "$CLOUDFLARE_TOKEN" ]; then
 
     echo "Cloudflare tunnel token belum tersedia."
     echo "Skipping Cloudflared deployment."

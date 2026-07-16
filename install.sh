@@ -16,6 +16,8 @@ set -a
 source "$CONFIG_FILE"
 set +a
 
+bash "$SCRIPT_DIR/scripts/check-config.sh"
+
 echo "================================="
 echo " Gitea + Cloudflared Installer"
 echo "================================="

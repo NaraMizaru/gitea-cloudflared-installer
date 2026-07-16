@@ -15,11 +15,14 @@ echo "Deploying Gitea Runner..."
 
 STACK_DIR="/opt/stacks/runner"
 
+mkdir -p "$STACK_DIR"
+mkdir -p "$DATA_DIR/runner"
+
 cp compose/runner/docker-compose.yml \
 $STACK_DIR/docker-compose.yml
 
-cp compose/runner/config.yaml \
-/srv/data/runner/config.yaml
+envsubst '$DOCKER_NETWORK' < compose/runner/config.yaml \
+> "$DATA_DIR/runner/config.yaml"
 
 envsubst < compose/runner/.env.template \
 > $STACK_DIR/.env

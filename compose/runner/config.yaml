@@ -16,7 +16,7 @@ cache:
 
 container:
   # job container akan masuk network yang sama dengan gitea
-  network: "git-network"
+  network: "${DOCKER_NETWORK}"
 
   # tidak perlu DinD
   privileged: false

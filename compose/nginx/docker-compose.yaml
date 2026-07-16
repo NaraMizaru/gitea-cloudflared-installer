@@ -12,4 +12,5 @@ services:
 
 networks:
   git-network:
+    name: ${DOCKER_NETWORK}
     external: true

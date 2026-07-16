@@ -9,12 +9,13 @@ services:
       GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN}
       CONFIG_FILE: /config.yaml
     volumes:
-      - /srv/data/runner:/data
-      - /srv/data/runner/config.yaml:/config.yaml
+      - ${DATA_DIR}/runner:/data
+      - ${DATA_DIR}/runner/config.yaml:/config.yaml
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - git-network
 
 networks:
   git-network:
+    name: ${DOCKER_NETWORK}
     external: true

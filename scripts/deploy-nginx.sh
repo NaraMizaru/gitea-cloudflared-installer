@@ -10,7 +10,10 @@ mkdir -p "$STACK_DIR"
 
 cp -r compose/nginx/* "$STACK_DIR"
 
-envsubst < compose/nginx/conf.d/gitea.conf \
+envsubst < compose/nginx/.env.template \
+> "$STACK_DIR/.env"
+
+envsubst '$DOMAIN' < compose/nginx/conf.d/gitea.conf \
 > "$STACK_DIR/conf.d/gitea.conf"
 
 cd "$STACK_DIR"
