@@ -1,0 +1,15 @@
+services:
+  nginx:
+    image: nginx:1.28-alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d:ro
+    networks:
+      - git-network
+
+networks:
+  git-network:
+    external: true

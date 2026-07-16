@@ -41,6 +41,9 @@ echo ""
 echo "[5] Deploy Runner"
 bash "$SCRIPT_DIR/scripts/deploy-runner.sh"
 
+echo ""
+echo "[6] Deploy Nginx"
+bash "$SCRIPT_DIR/scripts/deploy-nginx.sh"
 
 echo ""
 echo "Base server setup complete!"

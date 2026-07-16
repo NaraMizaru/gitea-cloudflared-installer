@@ -2,6 +2,14 @@
 
 set -e
 
+echo "Checking runner configuration..."
+
+if [ -z "$RUNNER_TOKEN" ]; then
+    echo "Runner token belum tersedia."
+    echo "Skipping runner deployment."
+
+    exit 0
+fi
 
 echo "Deploying Gitea Runner..."
 
