@@ -186,14 +186,26 @@ chmod +x setup-ssh.sh
 ---
 
 <details>
-<summary><b>📖 (Opsional) Petunjuk Konfigurasi Manual</b></summary>
+<summary><b>📖 (Opsional) Petunjuk Konfigurasi Manual (Sesuai Dokumentasi Resmi Cloudflare)</b></summary>
 
-Jika Anda lebih memilih mengonfigurasi SSH client secara manual tanpa skrip `setup-ssh.sh`:
+Jika Anda lebih memilih mengonfigurasi SSH client secara manual (referensi: [Dokumentasi Cloudflare Tunnel Downloads](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/)):
 
 1. **Install `cloudflared` di Client**:
-   - **Windows**: `winget install cloudflare.cloudflared` atau via Chocolatey `choco install cloudflared`.
-   - **Linux**: Pasang paket `cloudflared` via package manager (`apt install cloudflared`, `pacman -S cloudflared`, `dnf install cloudflared`).
-   - **macOS**: `brew install cloudflare/cloudflare/cloudflared`.
+   - **Windows**:
+     - Via `winget`: `winget install --id Cloudflare.cloudflared`
+     - Via `choco`: `choco install cloudflared`
+     - Direct Download: Unduh `.exe` (64-bit) dari [GitHub Releases Cloudflare](https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe) atau installer `.msi`.
+   - **Linux**:
+     - Via [Cloudflare Package Repository](https://pkg.cloudflare.com/) (Debian/Ubuntu/Fedora/RHEL/Arch).
+     - Direct Binary (Tanpa Root):
+       ```bash
+       mkdir -p ~/.local/bin
+       curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ~/.local/bin/cloudflared
+       chmod +x ~/.local/bin/cloudflared
+       ```
+   - **macOS**:
+     - Via Homebrew: `brew install cloudflared` (atau `brew install cloudflare/cloudflare/cloudflared`)
+     - Direct Binary: Unduh [cloudflared-darwin-arm64.tgz](https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz) atau `amd64`.
 
 2. **Edit file SSH Config (`~/.ssh/config`)**:
    Tambahkan blok konfigurasi berikut ke berkas `~/.ssh/config` (atau `C:\Users\<Username>\.ssh\config` di Windows):

@@ -190,21 +190,49 @@ if ($cloudflaredCmd) {
         $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
         $chocoCmd  = Get-Command choco -ErrorAction SilentlyContinue
 
+        $pkgInstalled = $false
         if ($wingetCmd) {
-            Write-InfoMessage "Installing cloudflared using winget..."
-            winget install --id Cloudflare.cloudflared --exact --accept-source-agreements --accept-package-agreements
+            try {
+                Write-InfoMessage "Installing cloudflared using winget..."
+                & winget install --id Cloudflare.cloudflared --exact --accept-source-agreements --accept-package-agreements
+                $pkgInstalled = $true
+            } catch {
+                Write-WarningMessage "winget installation failed or returned an error. Falling back to direct download."
+            }
         } elseif ($chocoCmd) {
-            Write-InfoMessage "Installing cloudflared using Chocolatey..."
-            choco install cloudflared -y
-        } else {
-            Stop-WithDie "Neither winget nor Chocolatey was found. Please install cloudflared manually: https://github.com/cloudflare/cloudflared/releases"
+            try {
+                Write-InfoMessage "Installing cloudflared using Chocolatey..."
+                & choco install cloudflared -y
+                $pkgInstalled = $true
+            } catch {
+                Write-WarningMessage "Chocolatey installation failed. Falling back to direct download."
+            }
         }
 
-        # Check candidate paths again after install
+        # Check candidate paths after package manager install attempt
         foreach ($p in $candidatePaths) {
             if (Test-Path $p) {
                 $foundPath = $p
                 break
+            }
+        }
+
+        if (-not $foundPath) {
+            Write-InfoMessage "Downloading cloudflared.exe directly from Cloudflare GitHub releases..."
+            $binDir = Join-Path $HOME ".local\bin"
+            if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir -Force | Out-Null }
+            $targetExe = Join-Path $binDir "cloudflared.exe"
+
+            $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") { "amd64" } else { "386" }
+            $downloadUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-$arch.exe"
+
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                Invoke-WebRequest -Uri $downloadUrl -OutFile $targetExe -UseBasicParsing
+                Write-SuccessMessage "Downloaded cloudflared.exe to $targetExe"
+                $foundPath = $targetExe
+            } catch {
+                Stop-WithDie "Failed to download cloudflared.exe: $_"
             }
         }
     }

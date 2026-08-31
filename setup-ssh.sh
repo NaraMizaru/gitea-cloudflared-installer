@@ -428,71 +428,106 @@ cloudflared_version() {
 # ============================================================
 # Install cloudflared - Linux
 # ============================================================
+# Download cloudflared binary (Fallback)
+# ============================================================
+
+download_cloudflared_direct() {
+    info "Downloading cloudflared binary directly from Cloudflare GitHub releases..."
+
+    local install_dir="${HOME}/.local/bin"
+    mkdir -p "$install_dir"
+
+    local download_url=""
+    case "$OS" in
+        linux)
+            case "$ARCH" in
+                amd64) download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" ;;
+                arm64) download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" ;;
+                arm)   download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm" ;;
+                386)   download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386" ;;
+                *)     die "Unsupported architecture for direct download: $ARCH" ;;
+            esac
+            curl -fsSL "$download_url" -o "${install_dir}/cloudflared"
+            chmod +x "${install_dir}/cloudflared"
+            ;;
+
+        macos)
+            case "$ARCH" in
+                arm64) download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64.tgz" ;;
+                amd64) download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64.tgz" ;;
+                *)     die "Unsupported architecture for direct download: $ARCH" ;;
+            esac
+            local temp_tgz
+            temp_tgz="$(mktemp)"
+            curl -fsSL "$download_url" -o "$temp_tgz"
+            tar -xzf "$temp_tgz" -C "$install_dir"
+            rm -f "$temp_tgz"
+            chmod +x "${install_dir}/cloudflared"
+            ;;
+
+        windows)
+            case "$ARCH" in
+                amd64) download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" ;;
+                386)   download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-386.exe" ;;
+                *)     download_url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" ;;
+            esac
+            curl -fsSL "$download_url" -o "${install_dir}/cloudflared.exe"
+            ;;
+    esac
+
+    persist_unix_path "$install_dir"
+    success "cloudflared installed to ${install_dir}"
+}
 
 install_cloudflared_linux() {
-
     case "$DISTRO" in
-
         ubuntu|debian|linuxmint|pop)
-            if ! command_exists apt; then
-                die "apt was not found."
+            if command_exists apt; then
+                info "Installing cloudflared using apt..."
+                if sudo apt update && sudo apt install -y cloudflared 2>/dev/null; then
+                    return 0
+                fi
+                warning "apt install failed or cloudflared not in apt repository. Falling back to direct binary download..."
             fi
-
-            info "Installing cloudflared using apt..."
-
-            sudo apt update
-            sudo apt install -y cloudflared
             ;;
 
         arch|manjaro|endeavouros)
-            if ! command_exists pacman; then
-                die "pacman was not found."
+            if command_exists pacman; then
+                info "Installing cloudflared using pacman..."
+                if sudo pacman -Sy --needed --noconfirm cloudflared 2>/dev/null; then
+                    return 0
+                fi
+                warning "pacman install failed. Falling back to direct binary download..."
             fi
-
-            info "Installing cloudflared using pacman..."
-
-            sudo pacman -Sy --needed cloudflared
             ;;
 
         fedora)
-            if ! command_exists dnf; then
-                die "dnf was not found."
+            if command_exists dnf; then
+                info "Installing cloudflared using dnf..."
+                if sudo dnf install -y cloudflared 2>/dev/null; then
+                    return 0
+                fi
+                warning "dnf install failed. Falling back to direct binary download..."
             fi
-
-            info "Installing cloudflared using dnf..."
-
-            sudo dnf install -y cloudflared
             ;;
 
         rhel|centos|rocky|almalinux)
             if command_exists dnf; then
                 info "Installing cloudflared using dnf..."
-                sudo dnf install -y cloudflared
-
+                if sudo dnf install -y cloudflared 2>/dev/null; then
+                    return 0
+                fi
             elif command_exists yum; then
                 info "Installing cloudflared using yum..."
-                sudo yum install -y cloudflared
-
-            else
-                die "Neither dnf nor yum was found."
+                if sudo yum install -y cloudflared 2>/dev/null; then
+                    return 0
+                fi
             fi
-            ;;
-
-        *)
-            die "Unsupported Linux distribution: ${DISTRO}
-
-Supported distributions:
-    Debian
-    Ubuntu
-    Arch
-    Fedora
-    RHEL
-    CentOS
-    Rocky
-    AlmaLinux
-"
+            warning "Package manager install failed. Falling back to direct binary download..."
             ;;
     esac
+
+    download_cloudflared_direct
 }
 
 # ============================================================
@@ -500,16 +535,17 @@ Supported distributions:
 # ============================================================
 
 install_cloudflared_macos() {
-
-    if ! command_exists brew; then
-        die "Homebrew is not installed.
-
-Install Homebrew first, then run this script again."
+    if command_exists brew; then
+        info "Installing cloudflared using Homebrew..."
+        if brew install cloudflare/cloudflare/cloudflared 2>/dev/null || brew install cloudflared 2>/dev/null; then
+            return 0
+        fi
+        warning "Homebrew install failed. Falling back to direct binary download..."
+    else
+        warning "Homebrew is not installed. Falling back to direct binary download..."
     fi
 
-    info "Installing cloudflared using Homebrew..."
-
-    brew install cloudflare/cloudflare/cloudflared
+    download_cloudflared_direct
 }
 
 # ============================================================
@@ -517,32 +553,23 @@ Install Homebrew first, then run this script again."
 # ============================================================
 
 install_cloudflared_windows() {
-
     if command_exists winget; then
-
         info "Installing cloudflared using winget..."
-
-        winget install \
-            --id Cloudflare.cloudflared \
-            --exact \
-            --accept-source-agreements \
-            --accept-package-agreements
-
-        return
+        if winget install --id Cloudflare.cloudflared --exact --accept-source-agreements --accept-package-agreements 2>/dev/null; then
+            return 0
+        fi
+        warning "winget install failed. Falling back to direct binary download..."
     fi
 
     if command_exists choco; then
-
         info "Installing cloudflared using Chocolatey..."
-
-        choco install cloudflared -y
-
-        return
+        if choco install cloudflared -y 2>/dev/null; then
+            return 0
+        fi
+        warning "Chocolatey install failed. Falling back to direct binary download..."
     fi
 
-    die "Neither winget nor Chocolatey was found.
-
-Install cloudflared manually and run this script again."
+    download_cloudflared_direct
 }
 
 # ============================================================
@@ -550,24 +577,11 @@ Install cloudflared manually and run this script again."
 # ============================================================
 
 install_cloudflared() {
-
     case "$OS" in
-
-        linux)
-            install_cloudflared_linux
-            ;;
-
-        macos)
-            install_cloudflared_macos
-            ;;
-
-        windows)
-            install_cloudflared_windows
-            ;;
-
-        *)
-            die "Unsupported operating system."
-            ;;
+        linux)   install_cloudflared_linux ;;
+        macos)   install_cloudflared_macos ;;
+        windows) install_cloudflared_windows ;;
+        *)       die "Unsupported operating system." ;;
     esac
 }
 
