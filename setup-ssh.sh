@@ -483,18 +483,38 @@ install_cloudflared_linux() {
     case "$DISTRO" in
         ubuntu|debian|linuxmint|pop)
             if command_exists apt; then
-                info "Installing cloudflared using apt..."
-                if sudo apt update && sudo apt install -y cloudflared 2>/dev/null; then
+                info "Checking apt repository for cloudflared..."
+                if sudo apt install -y cloudflared >/dev/null 2>&1; then
                     return 0
                 fi
-                warning "apt install failed or cloudflared not in apt repository. Falling back to direct binary download..."
+
+                info "Adding Cloudflare APT repository..."
+                sudo mkdir -p /etc/apt/keyrings >/dev/null 2>&1 || true
+                curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /etc/apt/keyrings/cloudflare-main.gpg >/dev/null 2>&1 || true
+                local suite
+                suite="$(lsb_release -cs 2>/dev/null || echo "stable")"
+                echo "deb [signed-by=/etc/apt/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared ${suite} main" | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null 2>&1 || true
+
+                if sudo apt update >/dev/null 2>&1 && sudo apt install -y cloudflared >/dev/null 2>&1; then
+                    return 0
+                fi
+
+                info "Installing official Cloudflare .deb package..."
+                local deb_file="/tmp/cloudflared-${ARCH}.deb"
+                if curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}.deb" -o "$deb_file" >/dev/null 2>&1; then
+                    if sudo dpkg -i "$deb_file" >/dev/null 2>&1; then
+                        rm -f "$deb_file"
+                        return 0
+                    fi
+                fi
+                warning "apt/dpkg install failed. Falling back to direct binary download..."
             fi
             ;;
 
         arch|manjaro|endeavouros)
             if command_exists pacman; then
                 info "Installing cloudflared using pacman..."
-                if sudo pacman -Sy --needed --noconfirm cloudflared 2>/dev/null; then
+                if sudo pacman -Sy --needed --noconfirm cloudflared >/dev/null 2>&1; then
                     return 0
                 fi
                 warning "pacman install failed. Falling back to direct binary download..."
@@ -504,7 +524,7 @@ install_cloudflared_linux() {
         fedora)
             if command_exists dnf; then
                 info "Installing cloudflared using dnf..."
-                if sudo dnf install -y cloudflared 2>/dev/null; then
+                if sudo dnf install -y cloudflared >/dev/null 2>&1; then
                     return 0
                 fi
                 warning "dnf install failed. Falling back to direct binary download..."
@@ -514,12 +534,12 @@ install_cloudflared_linux() {
         rhel|centos|rocky|almalinux)
             if command_exists dnf; then
                 info "Installing cloudflared using dnf..."
-                if sudo dnf install -y cloudflared 2>/dev/null; then
+                if sudo dnf install -y cloudflared >/dev/null 2>&1; then
                     return 0
                 fi
             elif command_exists yum; then
                 info "Installing cloudflared using yum..."
-                if sudo yum install -y cloudflared 2>/dev/null; then
+                if sudo yum install -y cloudflared >/dev/null 2>&1; then
                     return 0
                 fi
             fi
