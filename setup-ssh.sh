@@ -101,19 +101,19 @@ Examples:
         Interactive domain setup.
         Configures Git SSH only.
 
-    ${SCRIPT_NAME} rplcraft.my.id
+    ${SCRIPT_NAME} example.com
 
         Configures:
-            git-ssh.rplcraft.my.id
+            git-ssh.example.com
 
     ${SCRIPT_NAME} --host-ssh
 
         Interactive domain setup.
         Configures:
-            git-ssh.rplcraft.my.id
-            ssh.rplcraft.my.id
+            git-ssh.example.com
+            ssh.example.com
 
-    ${SCRIPT_NAME} --host-ssh rplcraft.my.id
+    ${SCRIPT_NAME} --host-ssh example.com
 
         Configures Git SSH and Host SSH.
 
@@ -711,10 +711,10 @@ validate_domain() {
         die "Enter the domain only.
 
 Example:
-    rplcraft.my.id
+    example.com
 
 Not:
-    https://rplcraft.my.id"
+    https://example.com"
     fi
 
     if [[ "$domain" == */* ]]; then
@@ -740,10 +740,16 @@ get_domain() {
     echo "─────────────────────────"
     echo
     echo "Example:"
-    echo "    rplcraft.my.id"
+    echo "    example.com"
     echo
 
-    read -r -p "Domain: " DOMAIN
+    if [[ -t 0 ]]; then
+        read -r -p "Domain: " DOMAIN
+    elif [[ -e /dev/tty ]]; then
+        read -r -p "Domain: " DOMAIN < /dev/tty
+    else
+        die "Interactive prompt requires terminal input. Please specify domain: <script> <domain>"
+    fi
 
     DOMAIN="$(validate_domain "$DOMAIN")"
 }

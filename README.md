@@ -29,6 +29,8 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 ├── README.md               # Panduan penggunaan (dokumentasi)
 ├── install.sh              # Skrip utama (installer) dengan loading spinner UI
 ├── install.log             # [Dibuat saat runtime] Berkas log detail proses instalasi
+├── setup-ssh.sh            # Skrip otomatisasi SSH client untuk Linux/macOS/Git Bash
+├── setup-ssh.ps1           # Skrip otomatisasi SSH client untuk Windows PowerShell (Native)
 ├── compose/                # Konfigurasi Docker Compose & template internal
 │   ├── cloudflared/
 │   ├── gitea/
@@ -109,37 +111,101 @@ Agar Gitea dan SSH host/container dapat diakses secara publik melalui Cloudflare
 ---
 
 ## 🔒 Konfigurasi SSH Client (Akses SSH lewat Cloudflare Tunnel)
-Karena traffic SSH dilewatkan melalui Cloudflare Tunnel, komputer client (PC Anda) yang ingin melakukan koneksi SSH ke Host OS maupun melakukan `git clone/push` lewat SSH Gitea harus terintegrasi dengan client-side `cloudflared`.
+Karena traffic SSH dilewatkan melalui Cloudflare Tunnel, komputer client (PC/laptop Anda) yang ingin melakukan `git clone/push` via SSH maupun akses SSH ke Host OS memerlukan `cloudflared` dan konfigurasi SSH client.
 
-### 1. Download & Install `cloudflared` di Client:
-- **Windows**: Download berkas `.exe` dari [Cloudflare GitHub Releases](https://github.com/cloudflare/cloudflared/releases) atau instal via winget: `winget install cloudflare.cloudflared`. Jika menggunakan installer `.msi`, letak default aplikasinya berada di `C:\Program Files\cloudflared\cloudflared.exe`. Pastikan direktori ini sudah masuk dalam `PATH` environment variable sistem Anda.
-- **Linux**: Pasang paket resmi `cloudflared` sesuai distro Anda (misal `apt install cloudflared`).
-- **macOS**: Instal melalui Homebrew: `brew install cloudflare/cloudflare/cloudflared`.
+Anda **tidak perlu meng-clone repositori ini** di komputer client. Cukup jalankan perintah **One-Liner** di bawah ini langsung di terminal client Anda!
 
-### 2. Tambahkan Konfigurasi ke file SSH `config` Client:
-Buka berkas konfigurasi SSH di komputer client Anda (terletak di `~/.ssh/config` untuk Linux/macOS, atau `C:\Users\<Username>\.ssh\config` untuk Windows). Tambahkan konfigurasi berikut:
+---
 
-#### Opsi A: Menggunakan Command Global (Direkomendasikan untuk Windows/Linux/macOS jika `cloudflared` ada di PATH)
-```ssh
-Host ssh.<DOMAIN>
-    User %r
-    ProxyCommand cloudflared access ssh --hostname %h
+### ⚡ Cara 1: Menjalankan Langsung via Remote URL (Tanpa Clone Repo)
 
-Host git-ssh.<DOMAIN>
-    ProxyCommand cloudflared access ssh --hostname %h
+#### 🪟 Windows (PowerShell)
+Buka **PowerShell**, lalu jalankan salah satu perintah berikut:
+
+```powershell
+# Mode Interaktif (Skrip akan menanyakan nama domain secara otomatis)
+irm https://raw.githubusercontent.com/NaraMizaru/gitea-cloudflared-installer/main/setup-ssh.ps1 | iex
+
+# Langsung menentukan Domain (Git SSH saja)
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/NaraMizaru/gitea-cloudflared-installer/main/setup-ssh.ps1))) example.com
+
+# Mengaktifkan Git SSH + Host OS SSH
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/NaraMizaru/gitea-cloudflared-installer/main/setup-ssh.ps1))) -HostSsh example.com
 ```
 
-#### Opsi B: Menggunakan Absolute Path (Khusus Windows jika tidak mendaftarkan cloudflared ke PATH)
-```ssh
-Host ssh.<DOMAIN>
-    User %r
-    ProxyCommand "C:\Program Files\cloudflared\cloudflared.exe" access ssh --hostname %h
+> *Jika eksekusi skrip diblokir oleh ExecutionPolicy di PowerShell, izinkan sementara dengan perintah:*
+> `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
 
-Host git-ssh.<DOMAIN>
-    ProxyCommand "C:\Program Files\cloudflared\cloudflared.exe" access ssh --hostname %h
+#### 🐧 Linux & 🍎 macOS (serta Windows Git Bash / WSL)
+Buka **Terminal** atau **Git Bash**, lalu jalankan salah satu perintah berikut:
+
+```bash
+# Mode Interaktif (Skrip akan menanyakan nama domain secara otomatis)
+curl -fsSL https://raw.githubusercontent.com/NaraMizaru/gitea-cloudflared-installer/main/setup-ssh.sh | bash
+
+# Langsung menentukan Domain (Git SSH saja)
+curl -fsSL https://raw.githubusercontent.com/NaraMizaru/gitea-cloudflared-installer/main/setup-ssh.sh | bash -s -- example.com
+
+# Mengaktifkan Git SSH + Host OS SSH
+curl -fsSL https://raw.githubusercontent.com/NaraMizaru/gitea-cloudflared-installer/main/setup-ssh.sh | bash -s -- --host-ssh example.com
 ```
 
-> *Ganti `<DOMAIN>` dengan nama domain yang Anda definisikan di berkas `.env` (contoh: `rplcraft.my.id`).*
+---
+
+### 📂 Cara 2: Menjalankan Skrip Lokal (Jika Repositori Di-clone)
+
+Jika Anda sudah meng-clone repositori ini di komputer client:
+
+#### 🪟 Windows (PowerShell)
+```powershell
+.\setup-ssh.ps1 example.com
+# atau dengan Host SSH:
+.\setup-ssh.ps1 -HostSsh example.com
+```
+
+#### 🐧 Linux / 🍎 macOS / Git Bash
+```bash
+chmod +x setup-ssh.sh
+./setup-ssh.sh example.com
+# atau dengan Host SSH:
+./setup-ssh.sh --host-ssh example.com
+```
+
+---
+
+### 🛠️ Ringkasan Parameter Skrip
+
+| Parameter / Opsi | Bash (`setup-ssh.sh`) | PowerShell (`setup-ssh.ps1`) | Deskripsi |
+| :--- | :--- | :--- | :--- |
+| **Default / Interaktif** | `./setup-ssh.sh` | `.\setup-ssh.ps1` | Mode interaktif (meminta input domain). |
+| **Domain** | `./setup-ssh.sh example.com` | `.\setup-ssh.ps1 example.com` | Mengonfigurasi SSH untuk Git clone (`git-ssh.example.com`). |
+| **Host SSH** | `./setup-ssh.sh --host-ssh example.com` | `.\setup-ssh.ps1 -HostSsh example.com` | Mengonfigurasi Git SSH **dan** Host SSH (`ssh.example.com`). |
+| **Uninstall** | `./setup-ssh.sh --uninstall` | `.\setup-ssh.ps1 -Uninstall` | Menghapus blok konfigurasi SSH dari `~/.ssh/config`. |
+| **Help** | `./setup-ssh.sh --help` | `.\setup-ssh.ps1 -Help` | Menampilkan bantuan penggunaan skrip. |
+
+---
+
+<details>
+<summary><b>📖 (Opsional) Petunjuk Konfigurasi Manual</b></summary>
+
+Jika Anda lebih memilih mengonfigurasi SSH client secara manual tanpa skrip `setup-ssh.sh`:
+
+1. **Install `cloudflared` di Client**:
+   - **Windows**: `winget install cloudflare.cloudflared` atau via Chocolatey `choco install cloudflared`.
+   - **Linux**: Pasang paket `cloudflared` via package manager (`apt install cloudflared`, `pacman -S cloudflared`, `dnf install cloudflared`).
+   - **macOS**: `brew install cloudflare/cloudflare/cloudflared`.
+
+2. **Edit file SSH Config (`~/.ssh/config`)**:
+   Tambahkan blok konfigurasi berikut ke berkas `~/.ssh/config` (atau `C:\Users\<Username>\.ssh\config` di Windows):
+   ```ssh
+   Host ssh.example.com
+       User %r
+       ProxyCommand cloudflared access ssh --hostname %h
+
+   Host git-ssh.example.com
+       ProxyCommand cloudflared access ssh --hostname %h
+   ```
+</details>
 
 ---
 
