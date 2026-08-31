@@ -166,6 +166,7 @@ done
 
 OS="unknown"
 DISTRO="unknown"
+DISTRO_LIKE=""
 ARCH="unknown"
 
 detect_os() {
@@ -178,6 +179,7 @@ detect_os() {
                 # shellcheck disable=SC1091
                 source /etc/os-release
                 DISTRO="${ID:-unknown}"
+                DISTRO_LIKE="${ID_LIKE:-}"
             fi
             ;;
 
@@ -479,7 +481,119 @@ download_cloudflared_direct() {
     success "cloudflared installed to ${install_dir}"
 }
 
+# ============================================================
+# Install cloudflared - Arch Linux
+# ============================================================
+
+install_cloudflared_arch() {
+    local choice=""
+    local has_pacman=false
+    local has_yay=false
+
+    if command_exists pacman; then
+        has_pacman=true
+    fi
+
+    if command_exists yay; then
+        has_yay=true
+    fi
+
+    local is_interactive=false
+    if [[ -t 0 ]] || [[ -e /dev/tty ]]; then
+        is_interactive=true
+    fi
+
+    if [[ "$is_interactive" == true ]]; then
+        echo
+        echo "Arch Linux Package Manager"
+        echo "─────────────────────────"
+        echo "1) pacman $([[ "$has_pacman" == true ]] && echo "[detected]" || echo "[not found]")"
+        echo "2) yay    $([[ "$has_yay" == true ]] && echo "[detected]" || echo "[not found]")"
+        echo
+
+        local prompt_input=""
+        if [[ -t 0 ]]; then
+            read -r -p "Select package manager [1/2] (default: 1): " prompt_input
+        elif [[ -e /dev/tty ]]; then
+            read -r -p "Select package manager [1/2] (default: 1): " prompt_input < /dev/tty
+        fi
+
+        case "$prompt_input" in
+            2|yay)
+                choice="yay"
+                ;;
+            1|pacman|"")
+                choice="pacman"
+                ;;
+            *)
+                warning "Invalid option '${prompt_input}'. Defaulting to pacman..."
+                choice="pacman"
+                ;;
+        esac
+    else
+        if [[ "$has_pacman" == true ]]; then
+            choice="pacman"
+        elif [[ "$has_yay" == true ]]; then
+            choice="yay"
+        else
+            choice="pacman"
+        fi
+    fi
+
+    echo
+
+    if [[ "$choice" == "yay" ]]; then
+        if command_exists yay; then
+            info "Installing cloudflared using yay..."
+            if yay -S --needed --noconfirm cloudflared >/dev/null 2>&1; then
+                return 0
+            fi
+            warning "yay install failed."
+        else
+            warning "yay is not installed on this system."
+        fi
+
+        if command_exists pacman; then
+            info "Attempting installation using pacman..."
+            if sudo pacman -Sy --needed --noconfirm cloudflared >/dev/null 2>&1; then
+                return 0
+            fi
+            warning "pacman install failed."
+        fi
+    else
+        if command_exists pacman; then
+            info "Installing cloudflared using pacman..."
+            if sudo pacman -Sy --needed --noconfirm cloudflared >/dev/null 2>&1; then
+                return 0
+            fi
+            warning "pacman install failed."
+        else
+            warning "pacman is not installed on this system."
+        fi
+
+        if command_exists yay; then
+            info "Attempting installation using yay..."
+            if yay -S --needed --noconfirm cloudflared >/dev/null 2>&1; then
+                return 0
+            fi
+            warning "yay install failed."
+        fi
+    fi
+
+    warning "Arch package manager installation failed. Falling back to direct binary download..."
+    return 1
+}
+
 install_cloudflared_linux() {
+    # Check for Arch Linux or derivatives via DISTRO or DISTRO_LIKE
+    if [[ "$DISTRO" =~ ^(arch|manjaro|endeavouros|garuda|cachyos|artix|archarm)$ ]] || [[ "$DISTRO_LIKE" == *"arch"* ]]; then
+        if install_cloudflared_arch; then
+            return 0
+        fi
+        download_cloudflared_direct
+        return 0
+    fi
+
     case "$DISTRO" in
         ubuntu|debian|linuxmint|pop)
             if command_exists apt; then
@@ -508,16 +622,6 @@ install_cloudflared_linux() {
                     fi
                 fi
                 warning "apt/dpkg install failed. Falling back to direct binary download..."
-            fi
-            ;;
-
-        arch|manjaro|endeavouros)
-            if command_exists pacman; then
-                info "Installing cloudflared using pacman..."
-                if sudo pacman -Sy --needed --noconfirm cloudflared >/dev/null 2>&1; then
-                    return 0
-                fi
-                warning "pacman install failed. Falling back to direct binary download..."
             fi
             ;;
 
