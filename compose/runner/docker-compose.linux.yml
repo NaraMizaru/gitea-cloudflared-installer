@@ -1,0 +1,21 @@
+services:
+  runner-linux:
+    image: docker.io/gitea/runner:latest
+    container_name: ${LINUX_RUNNER_NAME:-gitea-runner-linux}
+    restart: unless-stopped
+    environment:
+      GITEA_INSTANCE_URL: ${GITEA_INSTANCE_URL}
+      GITEA_RUNNER_NAME: ${LINUX_RUNNER_NAME:-gitea-runner-linux}
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${RUNNER_TOKEN}
+      CONFIG_FILE: /config.yaml
+    volumes:
+      - ${DATA_DIR}/runner-linux:/data
+      - ${DATA_DIR}/runner-linux/config.yaml:/config.yaml
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - git-network
+
+networks:
+  git-network:
+    name: ${DOCKER_NETWORK}
+    external: true

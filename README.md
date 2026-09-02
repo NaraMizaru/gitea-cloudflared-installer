@@ -6,10 +6,12 @@ Installer otomatis untuk mendeploy Gitea, PostgreSQL, Gitea Runner (CI/CD), Ngin
 
 ## 🚀 Fitur Utama
 1. **Gitea & Postgres**: Layanan git server mandiri yang ringan dan database relasional.
-2. **Gitea Runner**: Menjalankan alur kerja CI/CD terintegrasi secara otomatis.
+2. **Gitea Runner (Linux & Headless Windows VM)**: Menjalankan alur kerja CI/CD terintegrasi secara otomatis. Mendukung runner berbasis Linux (`ubuntu-latest`) maupun Headless Windows Server VM (`dockur/windows` via KVM yang dilengkapi Visual Studio 2022 BuildTools, .NET SDK, Node.js, Python, & PowerShell Core di server Linux yang sama).
 3. **Nginx Reverse Proxy**: Mengatur traffic HTTP masuk ke container Gitea.
 4. **Cloudflared Tunnel**: Mengekspos server lokal ke internet secara aman melalui Cloudflare Tunnel tanpa memerlukan IP Publik statis maupun port-forwarding pada router.
 5. **Auto-Backup System**: Pencadangan data Gitea, database Postgres, dan file Docker Compose secara berkala yang dikonfigurasi melalui cron job.
+
+
 
 ---
 
@@ -35,7 +37,12 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 │   ├── cloudflared/
 │   ├── gitea/
 │   ├── nginx/
-│   └── runner/
+│   └── runner/             # Konfigurasi Runner (Linux & Headless Windows VM via dockur/windows KVM)
+│       ├── docker-compose.yml
+│       ├── docker-compose.linux.yml
+│       ├── docker-compose.windows-vm.yml
+│       └── oem/            # Skrip otomatisasi provisi Windows VM
+
 └── scripts/                # Kumpulan skrip otomasi yang dikelompokkan
     ├── backup/             # Skrip setup & eksekusi backup otomatis
     ├── deploy/             # Skrip untuk mendeploy kontainer masing-masing service
@@ -86,14 +93,33 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
 2. Navigasikan ke **Site Administration (Administrasi Situs)** -> **Actions** -> **Runners**.
 3. Klik tombol **Register runner** di pojok kanan atas.
 4. Salin token registrasi yang muncul (Registration Token).
-5. Buka kembali berkas `.env` di server Anda, lalu isi token tersebut pada variabel:
+5. Buka kembali berkas `.env` di server Anda, lalu sesuaikan konfigurasi Runner:
    ```env
+   # Tentukan tipe runner: linux, windows (atau windows-vm), atau both (Linux + Headless Windows VM sekaligus)
+   RUNNER_TYPE=both
+
+   # Masukkan token registrasi dari Gitea
    RUNNER_TOKEN=KODE_TOKEN_YANG_ANDA_SALIN
+
+   # Konfigurasi Linux Runner
+   LINUX_RUNNER_NAME=gitea-runner-linux
+   LINUX_RUNNER_LABELS=ubuntu-latest:docker://gitea/runner-images:ubuntu-latest
+
+   # Konfigurasi Windows Headless VM Runner (dockur/windows via KVM)
+   WINDOWS_RUNNER_NAME=gitea-runner-windows-vm
+   WINDOWS_RUNNER_LABELS=windows:host,windows-msbuild:host,windows-latest:host
+   WINDOWS_VM_RAM_SIZE=4G
+   WINDOWS_VM_CPU_CORES=2
+   WINDOWS_VM_DISK_SIZE=64G
+   WINDOWS_VM_VERSION=2022
    ```
 6. Jalankan deployment khusus untuk mengaktifkan **Gitea Runner**:
    ```bash
    ./install.sh --runner
    ```
+   *(Skrip akan mendeploy Linux runner dan/atau Headless Windows VM runner di server Linux Anda).*
+
+
 
 ---
 
