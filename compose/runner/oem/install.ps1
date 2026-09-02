@@ -4,34 +4,12 @@ $LogFile = "C:\oem\install-runner.log"
 Start-Transcript -Path $LogFile -Append
 
 Write-Host "=================================================="
-Write-Host "  Auto-Installing Gitea Windows Runner & BuildTools "
+Write-Host "  Auto-Installing Gitea Windows Runner (Priority 1) "
 Write-Host "=================================================="
 
-# 1. Install Chocolatey
-if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
-    Write-Host "[*] Installing Chocolatey package manager..."
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-    $env:Path += ";C:\ProgramData\chocolatey\bin"
-}
-
-# 2. Install Packages
-Write-Host "[*] Installing Git, PowerShell Core, Node.js, Python..."
-choco install -y git powershell-core nodejs python docker-cli
-
-Write-Host "[*] Installing Visual Studio 2022 Build Tools (MSBuild, .NET SDK)..."
-choco install -y visualstudio2022buildtools --package-parameters " \
-    --quiet --norestart \
-    --add Microsoft.VisualStudio.Workload.VisualStudioExtensionBuildTools \
-    --add Microsoft.VisualStudio.Workload.ManagedDesktopBuildTools \
-    --add Microsoft.NetCore.Component.SDK \
-    --add Microsoft.Net.Component.4.8.TargetingPack \
-    "
-
-$env:Path += ";C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin;C:\Program Files\Git\usr\bin"
-[Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
-
-# 3. Setup Gitea runner
+# ---------------------------------------------------------
+# STEP 1: Gitea Runner Setup & Registration (Instant Active)
+# ---------------------------------------------------------
 $RunnerDir = "C:\actions-runner"
 if (-not (Test-Path -Path $RunnerDir)) {
     New-Item -ItemType Directory -Force -Path $RunnerDir | Out-Null
@@ -48,7 +26,7 @@ if (-not (Test-Path -Path "$RunnerDir\gitea-runner.exe")) {
 
 # Load configuration from C:\oem\runner-env.ps1 if present
 if (Test-Path "C:\oem\runner-env.ps1") {
-    Write-Host "[*] Loading environment variables from C:\oem\runner-env.ps1..."
+    Write-Host "[*] Loading configuration from C:\oem\runner-env.ps1..."
     . "C:\oem\runner-env.ps1"
 }
 
@@ -69,14 +47,14 @@ if (-not (Test-Path -Path "$RunnerDir\config.yaml")) {
 
 if (-not (Test-Path -Path "$RunnerDir\.runner")) {
     if ($GiteaUrl -and $Token) {
-        Write-Host "[*] Registering Gitea Runner: $RunnerName..."
+        Write-Host "[*] Registering Gitea Runner: $RunnerName to $GiteaUrl..."
         .\gitea-runner.exe register --no-interactive --instance $GiteaUrl --token $Token --name $RunnerName --labels $Labels
     } else {
-        Write-Host "[!] Skipping registration: GITEA_INSTANCE_URL or Registration Token not provided."
+        Write-Host "[!] Skipping registration: GiteaUrl or Token not provided."
     }
 }
 
-# 4. Start Gitea runner as persistent Scheduled Task (Auto-start on boot)
+# Register Gitea runner as Scheduled Task and start immediately
 Write-Host "[*] Registering Gitea runner daemon as Windows Startup Task..."
 try {
     $Action = New-ScheduledTaskAction -Execute "$RunnerDir\gitea-runner.exe" -Argument "daemon --config `"$RunnerDir\config.yaml`"" -WorkingDirectory $RunnerDir
@@ -84,10 +62,38 @@ try {
     $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Force
     Start-ScheduledTask -TaskName "GiteaRunner"
-    Write-Host "[*] Gitea runner task registered and started successfully."
+    Write-Host "[*] Gitea runner task registered and started successfully!"
 } catch {
     Write-Host "[!] Fallback: Starting process directly..."
     Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
+}
+
+# ---------------------------------------------------------
+# STEP 2: Install Supporting Tools (Git, PowerShell, Node, Python)
+# ---------------------------------------------------------
+Write-Host "=================================================="
+Write-Host "  Installing Development Tools in Background      "
+Write-Host "=================================================="
+
+# Install Chocolatey
+if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
+    Write-Host "[*] Installing Chocolatey package manager..."
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    try {
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        $env:Path += ";C:\ProgramData\chocolatey\bin"
+    } catch {
+        Write-Host "[!] Warning: Chocolatey install failed: $_"
+    }
+}
+
+# Install Git, PowerShell Core, Node.js, Python
+if (Get-Command "choco" -ErrorAction SilentlyContinue) {
+    Write-Host "[*] Installing Git, PowerShell Core, Node.js, Python..."
+    choco install -y git powershell-core nodejs-lts python3
+    
+    $env:Path += ";C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;C:\Program Files\nodejs;C:\Python312"
+    [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
 }
 
 Stop-Transcript
