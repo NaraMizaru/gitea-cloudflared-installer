@@ -81,11 +81,14 @@ fi
 
 echo "Deploying Gitea Runner (Mode: $RUNNER_TYPE)..."
 
-# Copy compose & oem files
+# Copy compose & oem files cleanly
 cp "$PROJECT_ROOT/compose/runner/docker-compose.yml" "$STACK_DIR/docker-compose.yml"
 cp "$PROJECT_ROOT/compose/runner/docker-compose.linux.yml" "$STACK_DIR/docker-compose.linux.yml"
 cp "$PROJECT_ROOT/compose/runner/docker-compose.windows-vm.yml" "$STACK_DIR/docker-compose.windows-vm.yml"
-cp -r "$PROJECT_ROOT/compose/runner/oem" "$STACK_DIR/oem"
+
+rm -rf "$STACK_DIR/oem"
+mkdir -p "$STACK_DIR/oem"
+cp -r "$PROJECT_ROOT/compose/runner/oem/." "$STACK_DIR/oem/"
 
 echo "$NEW_ENV" > "$STACK_DIR/.env"
 
@@ -104,14 +107,24 @@ fi
 
 if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RUNNER_TYPE" = "both" ] || [ "$RUNNER_TYPE" = "both-vm" ]; then
     mkdir -p "$DATA_DIR/runner-windows-vm"
-    mkdir -p "$STACK_DIR/oem"
     
-    # Generate runner-env.ps1 dengan variabel yang di-substitusi untuk Windows VM
+    ACTUAL_GITEA_URL="https://${DOMAIN}"
+    ACTUAL_TOKEN="${WINDOWS_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
+    ACTUAL_RUNNER_NAME="${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}"
+    ACTUAL_LABELS="${WINDOWS_RUNNER_LABELS:-windows:host,windows-msbuild:host,windows-latest:host}"
+
+    # Injeksi langsung ke install.ps1 agar variabel pasti terisi
+    sed -i "s|\$GiteaUrl = \$null|\$GiteaUrl = \"${ACTUAL_GITEA_URL}\"|g" "$STACK_DIR/oem/install.ps1"
+    sed -i "s|\$Token = \$null|\$Token = \"${ACTUAL_TOKEN}\"|g" "$STACK_DIR/oem/install.ps1"
+    sed -i "s|\$RunnerName = \$null|\$RunnerName = \"${ACTUAL_RUNNER_NAME}\"|g" "$STACK_DIR/oem/install.ps1"
+    sed -i "s|\$Labels = \$null|\$Labels = \"${ACTUAL_LABELS}\"|g" "$STACK_DIR/oem/install.ps1"
+
+    # Generate runner-env.ps1 sebagai cadangan
     cat <<EOF > "$STACK_DIR/oem/runner-env.ps1"
-\$GiteaUrl = "https://${DOMAIN}"
-\$Token = "${WINDOWS_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
-\$RunnerName = "${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}"
-\$Labels = "${WINDOWS_RUNNER_LABELS:-windows:host,windows-msbuild:host,windows-latest:host}"
+\$GiteaUrl = "${ACTUAL_GITEA_URL}"
+\$Token = "${ACTUAL_TOKEN}"
+\$RunnerName = "${ACTUAL_RUNNER_NAME}"
+\$Labels = "${ACTUAL_LABELS}"
 EOF
 
     # Salin template config windows ke oem
