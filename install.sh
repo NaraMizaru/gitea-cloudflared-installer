@@ -2,6 +2,17 @@
 
 set -e
 
+# Check if running as root, if not, elevate using sudo
+if [ "$EUID" -ne 0 ]; then
+    echo "Skrip installer memerlukan hak akses root / sudo untuk konfigurasi sistem & Docker."
+    sudo -v || {
+        echo "Error: Autentikasi sudo gagal. Silakan jalankan dengan sudo:"
+        echo "  sudo ./install.sh"
+        exit 1
+    }
+    exec sudo -E bash "$0" "$@"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/.env"
 LOG_FILE="$SCRIPT_DIR/install.log"
