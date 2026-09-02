@@ -97,23 +97,21 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
 4. Salin token registrasi yang muncul (Registration Token).
 5. Buka kembali berkas `.env` di server Anda, lalu sesuaikan konfigurasi Runner:
    ```env
-   # Tentukan tipe runner: linux, windows (atau windows-vm), atau both (Linux + Headless Windows VM sekaligus)
-   RUNNER_TYPE=both
-
-   # Masukkan token registrasi dari Gitea
-   RUNNER_TOKEN=KODE_TOKEN_YANG_ANDA_SALIN
+   # Tentukan tipe runner: linux, windows-vm, atau both-vm
+   RUNNER_TYPE=both-vm
 
    # Konfigurasi Linux Runner
    LINUX_RUNNER_NAME=gitea-runner-linux
    LINUX_RUNNER_LABELS=ubuntu-latest:docker://gitea/runner-images:ubuntu-latest
+   LINUX_RUNNER_TOKEN=KODE_TOKEN_LINUX_RUNNER
 
    # Konfigurasi Windows Headless VM Runner (dockurr/windows via KVM)
    WINDOWS_RUNNER_NAME=gitea-runner-windows-vm
    WINDOWS_RUNNER_LABELS=windows:host,windows-msbuild:host,windows-latest:host
-   WINDOWS_VM_RAM_SIZE=4G
-   WINDOWS_VM_CPU_CORES=2
-   WINDOWS_VM_DISK_SIZE=64G
-   WINDOWS_VM_VERSION=2022
+   WINDOWS_RUNNER_TOKEN=KODE_TOKEN_WINDOWS_RUNNER
+
+   # (Opsional) Fallback jika menggunakan 1 token yang sama
+   # RUNNER_TOKEN=KODE_TOKEN_RUNNER
    ```
 6. Jalankan deployment khusus untuk mengaktifkan **Gitea Runner**:
    ```bash

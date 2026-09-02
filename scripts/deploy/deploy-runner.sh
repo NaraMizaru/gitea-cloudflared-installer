@@ -2,24 +2,44 @@
 
 set -e
 
-echo "Checking runner configuration..."
-
-if [ -z "$RUNNER_TOKEN" ]; then
-    echo "Runner token belum tersedia (RUNNER_TOKEN kosong di .env)."
-    echo "Skipping runner deployment."
-    exit 0
-fi
-
 # Fallback untuk kompatibilitas konfigurasi
 export RUNNER_TYPE="${RUNNER_TYPE:-linux}"
 export LINUX_RUNNER_NAME="${LINUX_RUNNER_NAME:-${RUNNER_NAME:-gitea-runner-linux}}"
 export LINUX_RUNNER_LABELS="${LINUX_RUNNER_LABELS:-${RUNNER_LABELS:-ubuntu-latest:docker://gitea/runner-images:ubuntu-latest}}"
+export LINUX_RUNNER_TOKEN="${LINUX_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
+
 export WINDOWS_RUNNER_NAME="${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}"
 export WINDOWS_RUNNER_LABELS="${WINDOWS_RUNNER_LABELS:-windows:host,windows-msbuild:host,windows-latest:host}"
+export WINDOWS_RUNNER_TOKEN="${WINDOWS_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
 export WINDOWS_VM_RAM_SIZE="${WINDOWS_VM_RAM_SIZE:-4G}"
 export WINDOWS_VM_CPU_CORES="${WINDOWS_VM_CPU_CORES:-2}"
 export WINDOWS_VM_DISK_SIZE="${WINDOWS_VM_DISK_SIZE:-64G}"
 export WINDOWS_VM_VERSION="${WINDOWS_VM_VERSION:-2022}"
+
+# Validasi token sesuai RUNNER_TYPE yang dipilih
+case "$RUNNER_TYPE" in
+    linux)
+        if [ -z "$LINUX_RUNNER_TOKEN" ]; then
+            echo "LINUX_RUNNER_TOKEN (atau RUNNER_TOKEN) belum tersedia di .env."
+            echo "Skipping runner deployment."
+            exit 0
+        fi
+        ;;
+    windows|windows-vm)
+        if [ -z "$WINDOWS_RUNNER_TOKEN" ]; then
+            echo "WINDOWS_RUNNER_TOKEN (atau RUNNER_TOKEN) belum tersedia di .env."
+            echo "Skipping runner deployment."
+            exit 0
+        fi
+        ;;
+    both|both-vm)
+        if [ -z "$LINUX_RUNNER_TOKEN" ] && [ -z "$WINDOWS_RUNNER_TOKEN" ]; then
+            echo "Runner token (LINUX_RUNNER_TOKEN / WINDOWS_RUNNER_TOKEN / RUNNER_TOKEN) belum tersedia di .env."
+            echo "Skipping runner deployment."
+            exit 0
+        fi
+        ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"

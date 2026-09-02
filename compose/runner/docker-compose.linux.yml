@@ -6,7 +6,7 @@ services:
     environment:
       GITEA_INSTANCE_URL: ${GITEA_INSTANCE_URL}
       GITEA_RUNNER_NAME: ${LINUX_RUNNER_NAME:-gitea-runner-linux}
-      GITEA_RUNNER_REGISTRATION_TOKEN: ${RUNNER_TOKEN}
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${LINUX_RUNNER_TOKEN:-${RUNNER_TOKEN}}
       CONFIG_FILE: /config.yaml
     volumes:
       - ${DATA_DIR}/runner-linux:/data
