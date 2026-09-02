@@ -23,8 +23,11 @@ help: ## Menampilkan panduan daftar perintah yang tersedia
 # Instalasi & Update
 # -----------------------------------------------------------------------------
 
-install: ## Install seluruh stack dari awal (Gitea, Runner, Nginx, Tunnel, Backup)
+install: ## Install seluruh stack (otomatis melewati komponen yang sudah terpasang & up-to-date)
 	@bash install.sh --all
+
+force-install: ## Paksa install / deploy ulang seluruh stack tanpa melewati komponen yang sudah aktif
+	@bash install.sh --all --force
 
 install-gitea: ## Install / deploy Gitea & PostgreSQL saja
 	@bash install.sh --gitea

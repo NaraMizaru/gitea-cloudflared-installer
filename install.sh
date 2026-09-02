@@ -8,6 +8,7 @@ LOG_FILE="$SCRIPT_DIR/install.log"
 
 # Default mode
 MODE="all"
+FORCE=false
 
 # Parse arguments
 while [[ "$#" -gt 0 ]]; do
@@ -18,6 +19,7 @@ while [[ "$#" -gt 0 ]]; do
         --proxy) MODE="proxy"; shift ;;
         --tunnel) MODE="tunnel"; shift ;;
         --backup) MODE="backup"; shift ;;
+        -f|--force) FORCE=true; shift ;;
         -h|--help)
             echo "Usage: bash install.sh [OPTION]"
             echo ""
@@ -28,6 +30,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "  --proxy     Mendeploy Nginx Reverse Proxy saja"
             echo "  --tunnel    Mendeploy Cloudflared Tunnel saja"
             echo "  --backup    Memasang skrip backup otomatis saja"
+            echo "  -f, --force Paksa install/deploy ulang meskipun container sudah berjalan & up-to-date"
             echo "  -h, --help  Menampilkan bantuan ini"
             exit 0
             ;;
@@ -58,6 +61,11 @@ source "$SCRIPT_DIR/scripts/utils/ui.sh"
 # Show header
 print_header
 
+EXTRA_ARGS=()
+if [ "$FORCE" = true ]; then
+    EXTRA_ARGS+=("--force")
+fi
+
 # Run validation and setup steps with loading spinner
 run_with_spinner "Memvalidasi berkas konfigurasi (.env)" bash "$SCRIPT_DIR/scripts/utils/check-config.sh"
 
@@ -68,23 +76,23 @@ run_with_spinner "Membuat direktori penyimpanan data" bash "$SCRIPT_DIR/scripts/
 run_with_spinner "Menyiapkan docker network" bash "$SCRIPT_DIR/scripts/setup/setup-network.sh"
 
 if [ "$MODE" = "all" ] || [ "$MODE" = "gitea" ]; then
-    run_with_spinner "Mendeploy Gitea & PostgreSQL" bash "$SCRIPT_DIR/scripts/deploy/deploy-gitea.sh"
+    run_with_spinner "Mendeploy Gitea & PostgreSQL" bash "$SCRIPT_DIR/scripts/deploy/deploy-gitea.sh" "${EXTRA_ARGS[@]}"
 fi
 
 if [ "$MODE" = "all" ] || [ "$MODE" = "runner" ]; then
-    run_with_spinner "Mendeploy Gitea Runner" bash "$SCRIPT_DIR/scripts/deploy/deploy-runner.sh"
+    run_with_spinner "Mendeploy Gitea Runner" bash "$SCRIPT_DIR/scripts/deploy/deploy-runner.sh" "${EXTRA_ARGS[@]}"
 fi
 
 if [ "$MODE" = "all" ] || [ "$MODE" = "proxy" ]; then
-    run_with_spinner "Mendeploy Nginx Reverse Proxy" bash "$SCRIPT_DIR/scripts/deploy/deploy-nginx.sh"
+    run_with_spinner "Mendeploy Nginx Reverse Proxy" bash "$SCRIPT_DIR/scripts/deploy/deploy-nginx.sh" "${EXTRA_ARGS[@]}"
 fi
 
 if [ "$MODE" = "all" ] || [ "$MODE" = "tunnel" ]; then
-    run_with_spinner "Mendeploy Cloudflared Tunnel" bash "$SCRIPT_DIR/scripts/deploy/deploy-cloudflared.sh"
+    run_with_spinner "Mendeploy Cloudflared Tunnel" bash "$SCRIPT_DIR/scripts/deploy/deploy-cloudflared.sh" "${EXTRA_ARGS[@]}"
 fi
 
 if [ "$MODE" = "all" ] || [ "$MODE" = "backup" ]; then
-    run_with_spinner "Memasang skrip backup otomatis" bash "$SCRIPT_DIR/scripts/backup/install-backup.sh"
+    run_with_spinner "Memasang skrip backup otomatis" bash "$SCRIPT_DIR/scripts/backup/install-backup.sh" "${EXTRA_ARGS[@]}"
 fi
 
 echo ""

@@ -2,21 +2,35 @@
 
 set -e
 
-echo "Installing backup script"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_SCRIPT="/usr/local/bin/backup-gitea.sh"
+CRON_JOB="$BACKUP_SCHEDULE $TARGET_SCRIPT"
 
-cp "$SCRIPT_DIR/backup-gitea.sh" \
-/usr/local/bin/backup-gitea.sh
+# Check if script already exists and content is identical, and cron is set
+SCRIPT_MATCH=false
+if [ -f "$TARGET_SCRIPT" ] && cmp -s "$SCRIPT_DIR/backup-gitea.sh" "$TARGET_SCRIPT"; then
+    SCRIPT_MATCH=true
+fi
 
-chmod +x \
-/usr/local/bin/backup-gitea.sh
+CRON_MATCH=false
+if crontab -l 2>/dev/null | grep -Fxq "$CRON_JOB"; then
+    CRON_MATCH=true
+fi
 
-echo "Setting cron"
+if [ "$SCRIPT_MATCH" = true ] && [ "$CRON_MATCH" = true ] && [ "$1" != "--force" ]; then
+    echo "Skrip backup dan jadwal cron sudah terpasang dan up-to-date. Melewati instalasi ulang."
+    exit 0
+fi
 
-CRON_JOB="$BACKUP_SCHEDULE /usr/local/bin/backup-gitea.sh"
-if crontab -l 2>/dev/null | grep -q "/usr/local/bin/backup-gitea.sh"; then
-    (crontab -l 2>/dev/null | grep -v "/usr/local/bin/backup-gitea.sh"; echo "$CRON_JOB") | crontab -
+echo "Installing backup script..."
+
+cp "$SCRIPT_DIR/backup-gitea.sh" "$TARGET_SCRIPT"
+chmod +x "$TARGET_SCRIPT"
+
+echo "Setting cron job..."
+
+if crontab -l 2>/dev/null | grep -q "$TARGET_SCRIPT"; then
+    (crontab -l 2>/dev/null | grep -v "$TARGET_SCRIPT"; echo "$CRON_JOB") | crontab -
 else
     (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
 fi

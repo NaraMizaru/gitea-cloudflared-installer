@@ -21,14 +21,45 @@ export WINDOWS_VM_CPU_CORES="${WINDOWS_VM_CPU_CORES:-2}"
 export WINDOWS_VM_DISK_SIZE="${WINDOWS_VM_DISK_SIZE:-64G}"
 export WINDOWS_VM_VERSION="${WINDOWS_VM_VERSION:-2022}"
 
-echo "Deploying Gitea Runner (Mode: $RUNNER_TYPE)..."
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
 STACK_DIR="/opt/stacks/runner"
 
 mkdir -p "$STACK_DIR"
+
+# Check if target runner containers are already running
+LINUX_RUNNING=$(docker ps --filter "name=^${LINUX_RUNNER_NAME}$" --filter "status=running" -q 2>/dev/null || true)
+WINDOWS_RUNNING=$(docker ps --filter "name=^${WINDOWS_RUNNER_NAME}$" --filter "status=running" -q 2>/dev/null || true)
+
+ALL_RUNNING=false
+case "$RUNNER_TYPE" in
+    linux)
+        [ -n "$LINUX_RUNNING" ] && ALL_RUNNING=true
+        ;;
+    windows|windows-vm)
+        [ -n "$WINDOWS_RUNNING" ] && ALL_RUNNING=true
+        ;;
+    both|both-vm)
+        [ -n "$LINUX_RUNNING" ] && [ -n "$WINDOWS_RUNNING" ] && ALL_RUNNING=true
+        ;;
+esac
+
+NEW_ENV=$(envsubst < "$PROJECT_ROOT/compose/runner/.env.template")
+
+CONFIG_MATCH=false
+if [ -f "$STACK_DIR/docker-compose.yml" ] && [ -f "$STACK_DIR/.env" ]; then
+    if cmp -s "$PROJECT_ROOT/compose/runner/docker-compose.yml" "$STACK_DIR/docker-compose.yml" && \
+       [ "$NEW_ENV" = "$(cat "$STACK_DIR/.env" 2>/dev/null)" ]; then
+        CONFIG_MATCH=true
+    fi
+fi
+
+if [ "$ALL_RUNNING" = true ] && [ "$CONFIG_MATCH" = true ] && [ "$1" != "--force" ]; then
+    echo "Gitea Runner ($RUNNER_TYPE) sudah terpasang, aktif, dan up-to-date. Melewati instalasi ulang."
+    exit 0
+fi
+
+echo "Deploying Gitea Runner (Mode: $RUNNER_TYPE)..."
 
 # Copy compose & oem files
 cp "$PROJECT_ROOT/compose/runner/docker-compose.yml" "$STACK_DIR/docker-compose.yml"
@@ -36,18 +67,17 @@ cp "$PROJECT_ROOT/compose/runner/docker-compose.linux.yml" "$STACK_DIR/docker-co
 cp "$PROJECT_ROOT/compose/runner/docker-compose.windows-vm.yml" "$STACK_DIR/docker-compose.windows-vm.yml"
 cp -r "$PROJECT_ROOT/compose/runner/oem" "$STACK_DIR/oem"
 
-# Generate .env file di folder stack
-envsubst < "$PROJECT_ROOT/compose/runner/.env.template" > "$STACK_DIR/.env"
+echo "$NEW_ENV" > "$STACK_DIR/.env"
 
 # Setup folder & config sesuai RUNNER_TYPE
-if [ "$RUNNER_TYPE" = "linux" ] || [ "$RUNNER_TYPE" = "both" ]; then
+if [ "$RUNNER_TYPE" = "linux" ] || [ "$RUNNER_TYPE" = "both" ] || [ "$RUNNER_TYPE" = "both-vm" ]; then
     mkdir -p "$DATA_DIR/runner-linux"
     CONFIG_SRC="$PROJECT_ROOT/compose/runner/config.linux.yaml"
     if [ ! -f "$CONFIG_SRC" ]; then CONFIG_SRC="$PROJECT_ROOT/compose/runner/config.yaml"; fi
     envsubst '$DOCKER_NETWORK' < "$CONFIG_SRC" > "$DATA_DIR/runner-linux/config.yaml"
 fi
 
-if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RUNNER_TYPE" = "both" ]; then
+if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RUNNER_TYPE" = "both" ] || [ "$RUNNER_TYPE" = "both-vm" ]; then
     mkdir -p "$DATA_DIR/runner-windows-vm"
     
     # Cek ketersediaan KVM
