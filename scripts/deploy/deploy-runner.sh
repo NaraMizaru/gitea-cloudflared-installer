@@ -95,6 +95,11 @@ if [ "$RUNNER_TYPE" = "linux" ] || [ "$RUNNER_TYPE" = "both" ] || [ "$RUNNER_TYP
     CONFIG_SRC="$PROJECT_ROOT/compose/runner/config.linux.yaml"
     if [ ! -f "$CONFIG_SRC" ]; then CONFIG_SRC="$PROJECT_ROOT/compose/runner/config.yaml"; fi
     envsubst '$DOCKER_NETWORK' < "$CONFIG_SRC" > "$DATA_DIR/runner-linux/config.yaml"
+    
+    # Hapus .runner jika file kosong/korup agar container otomatis meregistrasi ulang
+    if [ -f "$DATA_DIR/runner-linux/.runner" ] && [ ! -s "$DATA_DIR/runner-linux/.runner" ]; then
+        rm -f "$DATA_DIR/runner-linux/.runner"
+    fi
 fi
 
 if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RUNNER_TYPE" = "both" ] || [ "$RUNNER_TYPE" = "both-vm" ]; then
