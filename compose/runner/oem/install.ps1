@@ -46,11 +46,16 @@ if (-not (Test-Path -Path "$RunnerDir\gitea-runner.exe")) {
     Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\gitea-runner.exe"
 }
 
-# Env variables passed from docker-compose / environment file
-$GiteaUrl = $env:GITEA_INSTANCE_URL
-$Token = $env:GITEA_RUNNER_REGISTRATION_TOKEN
-$RunnerName = if ($env:GITEA_RUNNER_NAME) { $env:GITEA_RUNNER_NAME } else { "gitea-runner-windows-vm" }
-$Labels = if ($env:GITEA_RUNNER_LABELS) { $env:GITEA_RUNNER_LABELS } else { "windows:host,windows-msbuild:host,windows-latest:host" }
+# Load configuration from C:\oem\runner-env.ps1 if present
+if (Test-Path "C:\oem\runner-env.ps1") {
+    Write-Host "[*] Loading environment variables from C:\oem\runner-env.ps1..."
+    . "C:\oem\runner-env.ps1"
+}
+
+if (-not $GiteaUrl) { $GiteaUrl = $env:GITEA_INSTANCE_URL }
+if (-not $Token) { $Token = if ($env:WINDOWS_RUNNER_TOKEN) { $env:WINDOWS_RUNNER_TOKEN } elseif ($env:GITEA_RUNNER_REGISTRATION_TOKEN) { $env:GITEA_RUNNER_REGISTRATION_TOKEN } else { $env:RUNNER_TOKEN } }
+if (-not $RunnerName) { $RunnerName = if ($env:GITEA_RUNNER_NAME) { $env:GITEA_RUNNER_NAME } else { "gitea-runner-windows-vm" } }
+if (-not $Labels) { $Labels = if ($env:GITEA_RUNNER_LABELS) { $env:GITEA_RUNNER_LABELS } else { "windows:host,windows-msbuild:host,windows-latest:host" } }
 
 if (-not (Test-Path -Path "$RunnerDir\config.yaml")) {
     if (Test-Path -Path "C:\oem\config.windows-vm.yaml") {
@@ -67,12 +72,22 @@ if (-not (Test-Path -Path "$RunnerDir\.runner")) {
         Write-Host "[*] Registering Gitea Runner: $RunnerName..."
         .\gitea-runner.exe register --no-interactive --instance $GiteaUrl --token $Token --name $RunnerName --labels $Labels
     } else {
-        Write-Host "[!] Skipping registration: GITEA_INSTANCE_URL or GITEA_RUNNER_REGISTRATION_TOKEN not provided."
+        Write-Host "[!] Skipping registration: GITEA_INSTANCE_URL or Registration Token not provided."
     }
 }
 
-# 4. Start gitea-runner daemon
-Write-Host "[*] Starting Gitea runner daemon..."
-Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
+# 4. Start Gitea runner as persistent Scheduled Task (Auto-start on boot)
+Write-Host "[*] Registering Gitea runner daemon as Windows Startup Task..."
+try {
+    $Action = New-ScheduledTaskAction -Execute "$RunnerDir\gitea-runner.exe" -Argument "daemon --config `"$RunnerDir\config.yaml`"" -WorkingDirectory $RunnerDir
+    $Trigger = New-ScheduledTaskTrigger -AtStartup
+    $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Force
+    Start-ScheduledTask -TaskName "GiteaRunner"
+    Write-Host "[*] Gitea runner task registered and started successfully."
+} catch {
+    Write-Host "[!] Fallback: Starting process directly..."
+    Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
+}
 
 Stop-Transcript

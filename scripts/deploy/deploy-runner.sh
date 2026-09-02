@@ -104,7 +104,21 @@ fi
 
 if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RUNNER_TYPE" = "both" ] || [ "$RUNNER_TYPE" = "both-vm" ]; then
     mkdir -p "$DATA_DIR/runner-windows-vm"
+    mkdir -p "$STACK_DIR/oem"
     
+    # Generate runner-env.ps1 dengan variabel yang di-substitusi untuk Windows VM
+    cat <<EOF > "$STACK_DIR/oem/runner-env.ps1"
+\$GiteaUrl = "https://${DOMAIN}"
+\$Token = "${WINDOWS_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
+\$RunnerName = "${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}"
+\$Labels = "${WINDOWS_RUNNER_LABELS:-windows:host,windows-msbuild:host,windows-latest:host}"
+EOF
+
+    # Salin template config windows ke oem
+    if [ -f "$PROJECT_ROOT/compose/runner/config.windows-vm.yaml" ]; then
+        cp "$PROJECT_ROOT/compose/runner/config.windows-vm.yaml" "$STACK_DIR/oem/config.windows-vm.yaml"
+    fi
+
     # Cek ketersediaan KVM
     if [ ! -e /dev/kvm ]; then
         echo "========================================================================="
