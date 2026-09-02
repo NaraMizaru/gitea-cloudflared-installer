@@ -6,7 +6,7 @@ Installer otomatis untuk mendeploy Gitea, PostgreSQL, Gitea Runner (CI/CD), Ngin
 
 ## 🚀 Fitur Utama
 1. **Gitea & Postgres**: Layanan git server mandiri yang ringan dan database relasional.
-2. **Gitea Runner (Linux & Headless Windows VM)**: Menjalankan alur kerja CI/CD terintegrasi secara otomatis. Mendukung runner berbasis Linux (`ubuntu-latest`) maupun Headless Windows Server VM (`dockur/windows` via KVM yang dilengkapi Visual Studio 2022 BuildTools, .NET SDK, Node.js, Python, & PowerShell Core di server Linux yang sama).
+2. **Gitea Runner (Linux & Headless Windows VM)**: Menjalankan alur kerja CI/CD terintegrasi secara otomatis. Mendukung runner berbasis Linux (`ubuntu-latest`) maupun Headless Windows Server VM (`dockurr/windows` via KVM yang dilengkapi Visual Studio 2022 BuildTools, .NET SDK, Node.js, Python, & PowerShell Core di server Linux yang sama).
 3. **Nginx Reverse Proxy**: Mengatur traffic HTTP masuk ke container Gitea.
 4. **Cloudflared Tunnel**: Mengekspos server lokal ke internet secara aman melalui Cloudflare Tunnel tanpa memerlukan IP Publik statis maupun port-forwarding pada router.
 5. **Auto-Backup System**: Pencadangan data Gitea, database Postgres, dan file Docker Compose secara berkala yang dikonfigurasi melalui cron job.
@@ -39,7 +39,7 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 │   ├── cloudflared/
 │   ├── gitea/
 │   ├── nginx/
-│   └── runner/             # Konfigurasi Runner (Linux & Headless Windows VM via dockur/windows KVM)
+│   └── runner/             # Konfigurasi Runner (Linux & Headless Windows VM via dockurr/windows KVM)
 │       ├── docker-compose.yml
 │       ├── docker-compose.linux.yml
 │       ├── docker-compose.windows-vm.yml
@@ -107,7 +107,7 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
    LINUX_RUNNER_NAME=gitea-runner-linux
    LINUX_RUNNER_LABELS=ubuntu-latest:docker://gitea/runner-images:ubuntu-latest
 
-   # Konfigurasi Windows Headless VM Runner (dockur/windows via KVM)
+   # Konfigurasi Windows Headless VM Runner (dockurr/windows via KVM)
    WINDOWS_RUNNER_NAME=gitea-runner-windows-vm
    WINDOWS_RUNNER_LABELS=windows:host,windows-msbuild:host,windows-latest:host
    WINDOWS_VM_RAM_SIZE=4G

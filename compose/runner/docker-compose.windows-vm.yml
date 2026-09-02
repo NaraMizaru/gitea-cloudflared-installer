@@ -1,6 +1,6 @@
 services:
   runner-windows-vm:
-    image: dockur/windows:latest
+    image: dockurr/windows:latest
     container_name: ${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}
     restart: unless-stopped
     devices:
