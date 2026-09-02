@@ -85,9 +85,10 @@ if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RU
         echo "========================================================================="
         echo "CATATAN / PERHATIAN:"
         echo "Perangkat /dev/kvm tidak ditemukan di server Linux ini."
-        echo "dockur/windows memerlukan KVM hardware virtualization untuk jalankan Windows VM."
-        echo "Pastikan KVM diaktifkan pada BIOS atau VPS provider Anda."
+        echo "Menonaktifkan mapping device /dev/kvm agar kontainer tetap bisa berjalan..."
         echo "========================================================================="
+        sed -i '/\/dev\/kvm/d' "$STACK_DIR/docker-compose.yml"
+        sed -i '/devices:/d' "$STACK_DIR/docker-compose.yml"
     fi
 fi
 
