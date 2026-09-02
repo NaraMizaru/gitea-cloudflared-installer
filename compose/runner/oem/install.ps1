@@ -52,6 +52,16 @@ $Token = $env:GITEA_RUNNER_REGISTRATION_TOKEN
 $RunnerName = if ($env:GITEA_RUNNER_NAME) { $env:GITEA_RUNNER_NAME } else { "gitea-runner-windows-vm" }
 $Labels = if ($env:GITEA_RUNNER_LABELS) { $env:GITEA_RUNNER_LABELS } else { "windows:host,windows-msbuild:host,windows-latest:host" }
 
+if (-not (Test-Path -Path "$RunnerDir\config.yaml")) {
+    if (Test-Path -Path "C:\oem\config.windows-vm.yaml") {
+        Write-Host "[*] Copying template config.windows-vm.yaml..."
+        Copy-Item -Path "C:\oem\config.windows-vm.yaml" -Destination "$RunnerDir\config.yaml" -Force
+    } else {
+        Write-Host "[*] Generating default config.yaml..."
+        .\gitea-runner.exe generate-config > "$RunnerDir\config.yaml"
+    }
+}
+
 if (-not (Test-Path -Path "$RunnerDir\.runner")) {
     if ($GiteaUrl -and $Token) {
         Write-Host "[*] Registering Gitea Runner: $RunnerName..."
@@ -63,6 +73,6 @@ if (-not (Test-Path -Path "$RunnerDir\.runner")) {
 
 # 4. Start gitea-runner daemon
 Write-Host "[*] Starting Gitea runner daemon..."
-Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon" -WindowStyle Hidden
+Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
 
 Stop-Transcript

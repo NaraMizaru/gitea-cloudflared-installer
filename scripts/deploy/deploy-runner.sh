@@ -42,8 +42,9 @@ envsubst < "$PROJECT_ROOT/compose/runner/.env.template" > "$STACK_DIR/.env"
 # Setup folder & config sesuai RUNNER_TYPE
 if [ "$RUNNER_TYPE" = "linux" ] || [ "$RUNNER_TYPE" = "both" ]; then
     mkdir -p "$DATA_DIR/runner-linux"
-    envsubst '$DOCKER_NETWORK' < "$PROJECT_ROOT/compose/runner/config.yaml" \
-    > "$DATA_DIR/runner-linux/config.yaml"
+    CONFIG_SRC="$PROJECT_ROOT/compose/runner/config.linux.yaml"
+    if [ ! -f "$CONFIG_SRC" ]; then CONFIG_SRC="$PROJECT_ROOT/compose/runner/config.yaml"; fi
+    envsubst '$DOCKER_NETWORK' < "$CONFIG_SRC" > "$DATA_DIR/runner-linux/config.yaml"
 fi
 
 if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RUNNER_TYPE" = "both" ]; then
