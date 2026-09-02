@@ -1,4 +1,4 @@
-.PHONY: help install install-gitea install-runner install-proxy install-tunnel install-backup update update-pull-images pull pull-images up down restart status ps logs logs-gitea logs-runner logs-proxy logs-tunnel backup check-env setup-ssh
+.PHONY: help install force-install install-gitea install-runner install-proxy install-tunnel install-backup update update-pull-images pull pull-images up down restart status ps logs logs-gitea logs-runner logs-proxy logs-tunnel backup reset-runner check-env setup-ssh
 
 .DEFAULT_GOAL := help
 
@@ -120,6 +120,14 @@ backup: ## Jalankan proses pencadangan (backup) Gitea & database secara manual
 	else \
 		bash scripts/backup/backup-gitea.sh; \
 	fi
+
+reset-runner: ## Hentikan & hapus seluruh data runner (Linux & Windows VM) untuk reset bersih
+	@echo "Menghentikan seluruh container runner..."
+	@[ -f /opt/stacks/runner/docker-compose.yml ] && docker compose -f /opt/stacks/runner/docker-compose.yml down -v 2>/dev/null || true
+	@docker rm -f gitea-runner-linux gitea-runner-windows gitea-runner-windows-vm 2>/dev/null || true
+	@echo "Membersihkan folder data runner..."
+	@sudo rm -rf /srv/data/runner-linux /srv/data/runner-windows-vm
+	@echo "Data runner berhasil dibersihkan dan siap dideploy ulang!"
 
 setup-ssh: ## Jalankan panduan konfigurasi SSH client
 	@bash setup-ssh.sh
