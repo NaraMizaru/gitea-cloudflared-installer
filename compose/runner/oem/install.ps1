@@ -31,7 +31,7 @@ choco install -y visualstudio2022buildtools --package-parameters " \
 $env:Path += ";C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin;C:\Program Files\Git\usr\bin"
 [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
 
-# 3. Setup Gitea act_runner
+# 3. Setup Gitea runner
 $RunnerDir = "C:\actions-runner"
 if (-not (Test-Path -Path $RunnerDir)) {
     New-Item -ItemType Directory -Force -Path $RunnerDir | Out-Null
@@ -39,11 +39,11 @@ if (-not (Test-Path -Path $RunnerDir)) {
 
 Set-Location $RunnerDir
 
-if (-not (Test-Path -Path "$RunnerDir\act_runner.exe")) {
-    Write-Host "[*] Downloading Gitea act_runner..."
+if (-not (Test-Path -Path "$RunnerDir\gitea-runner.exe")) {
+    Write-Host "[*] Downloading Gitea Runner v3.3.2..."
     $RunnerVersion = "3.3.2"
-    $RunnerUrl = "https://gitea.com/gitea/act_runner/releases/download/v$RunnerVersion/act_runner-$RunnerVersion-windows-amd64.exe"
-    Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\act_runner.exe"
+    $RunnerUrl = "https://gitea.com/gitea/runner/releases/download/v$RunnerVersion/gitea-runner-$RunnerVersion-windows-amd64.exe"
+    Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\gitea-runner.exe"
 }
 
 # Env variables passed from docker-compose / environment file
@@ -55,14 +55,14 @@ $Labels = if ($env:GITEA_RUNNER_LABELS) { $env:GITEA_RUNNER_LABELS } else { "win
 if (-not (Test-Path -Path "$RunnerDir\.runner")) {
     if ($GiteaUrl -and $Token) {
         Write-Host "[*] Registering Gitea Runner: $RunnerName..."
-        .\act_runner.exe register --no-interactive --instance $GiteaUrl --token $Token --name $RunnerName --labels $Labels
+        .\gitea-runner.exe register --no-interactive --instance $GiteaUrl --token $Token --name $RunnerName --labels $Labels
     } else {
         Write-Host "[!] Skipping registration: GITEA_INSTANCE_URL or GITEA_RUNNER_REGISTRATION_TOKEN not provided."
     }
 }
 
-# 4. Start act_runner daemon
-Write-Host "[*] Starting Gitea act_runner daemon..."
-Start-Process "$RunnerDir\act_runner.exe" -ArgumentList "daemon" -WindowStyle Hidden
+# 4. Start gitea-runner daemon
+Write-Host "[*] Starting Gitea runner daemon..."
+Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon" -WindowStyle Hidden
 
 Stop-Transcript
