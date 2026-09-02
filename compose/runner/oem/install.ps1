@@ -41,7 +41,7 @@ Set-Location $RunnerDir
 
 if (-not (Test-Path -Path "$RunnerDir\act_runner.exe")) {
     Write-Host "[*] Downloading Gitea act_runner..."
-    $RunnerVersion = "0.2.11"
+    $RunnerVersion = "3.3.2"
     $RunnerUrl = "https://gitea.com/gitea/act_runner/releases/download/v$RunnerVersion/act_runner-$RunnerVersion-windows-amd64.exe"
     Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\act_runner.exe"
 }
