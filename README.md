@@ -29,7 +29,9 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 .
 ├── .env.example            # Template konfigurasi environment
 ├── README.md               # Panduan penggunaan (dokumentasi)
+├── Makefile                # Antarmuka CLI ringkas untuk mengelola seluruh stack
 ├── install.sh              # Skrip utama (installer) dengan loading spinner UI
+├── update.sh               # Skrip pembaruan (git pull & re-deploy otomatis)
 ├── install.log             # [Dibuat saat runtime] Berkas log detail proses instalasi
 ├── setup-ssh.sh            # Skrip otomatisasi SSH client untuk Linux/macOS/Git Bash
 ├── setup-ssh.ps1           # Skrip otomatisasi SSH client untuk Windows PowerShell (Native)
@@ -42,7 +44,7 @@ Repositori ini memiliki struktur folder yang rapi dan terorganisir secara modula
 │       ├── docker-compose.linux.yml
 │       ├── docker-compose.windows-vm.yml
 │       └── oem/            # Skrip otomatisasi provisi Windows VM
-
+│
 └── scripts/                # Kumpulan skrip otomasi yang dikelompokkan
     ├── backup/             # Skrip setup & eksekusi backup otomatis
     ├── deploy/             # Skrip untuk mendeploy kontainer masing-masing service
@@ -284,5 +286,57 @@ Installer akan memasang skrip backup otomatis di `/usr/local/bin/backup-gitea.sh
 * **Picu Backup Manual**:
   ```bash
   sudo /usr/local/bin/backup-gitea.sh
+  # atau menggunakan Make:
+  make backup
   ```
 * **Hasil Backup**: File cadangan (.tar.gz dan .sql) disimpan teratur di folder `<BACKUP_DIR>/{gitea, postgres, compose}`.
+
+---
+
+## 🔄 Pembaruan Stack (Update Workflow)
+
+Saat ada perubahan konfigurasi, fitur baru, atau update repositori ini di GitHub, Anda dapat memperbarui stack Anda secara instan tanpa kehilangan data:
+
+### ⚡ Menggunakan Make (Direkomendasikan)
+Cukup jalankan satu perintah berikut di root repositori:
+```bash
+make update
+```
+
+Jika Anda juga ingin menarik versi image Docker terbaru (*docker pull*):
+```bash
+make update-pull-images
+```
+
+### 🐚 Menggunakan Skrip Langsung
+Jika tidak menggunakan `make`:
+```bash
+./update.sh
+# atau dengan pull Docker image terbaru:
+./update.sh --pull-images
+```
+
+> **Catatan Keamanan Data**: Proses update bersifat *idempotent*. Volume data persisten di folder `<DATA_DIR>` dan database Anda tidak akan hilang atau di-reset. Docker hanya akan memperbarui container yang mengalami perubahan konfigurasi.
+
+---
+
+## 🎛️ Manajemen Operasional (`Makefile`)
+
+Tersedia antarmuka CLI berbasis `Makefile` untuk memudahkan pemeliharaan harian server Anda:
+
+| Perintah | Deskripsi |
+| :--- | :--- |
+| `make help` | Menampilkan seluruh daftar perintah yang tersedia |
+| `make install` | Menjalankan instalasi seluruh stack dari awal |
+| `make install-runner` | Mendeploy / mengonfigurasi Gitea Runner saja |
+| `make update` | Mengambil update dari Git (`git pull`) dan me-redeploy konfigurasi |
+| `make update-pull-images` | Mengambil update dari Git + menarik image Docker terbaru |
+| `make up` | Menjalankan seluruh container stack di background |
+| `make down` | Menghentikan seluruh container stack |
+| `make restart` | Me-restart seluruh container stack |
+| `make ps` / `make status` | Memeriksa status aktif seluruh container |
+| `make logs` | Memantau log (`make logs-gitea`, `make logs-runner`, `make logs-proxy`, `make logs-tunnel`) |
+| `make backup` | Menjalankan pencadangan manual |
+| `make check-env` | Memeriksa apakah ada variabel baru di `.env.example` yang belum ada di `.env` |
+| `make setup-ssh` | Menjalankan wizard konfigurasi SSH client |
+
