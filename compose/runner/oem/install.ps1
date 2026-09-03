@@ -1,4 +1,5 @@
 Set-ExecutionPolicy Bypass -Scope Process -Force
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
 
 $LogFile = "C:\oem\install-runner.log"
 try {
@@ -152,6 +153,21 @@ Write-Host ""
 # STEP 4: Pasang dan Jalankan Service Windows
 # ---------------------------------------------------------
 Write-Host "[4/5] Memasang Service Background Runner (Windows Startup Task)..." -ForegroundColor Cyan
+
+# FIX 1: Izinkan PowerShell menjalankan script workflow secara permanen
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
+
+# FIX 2: Pastikan Node tersedia di SYSTEM PATH
+$systemPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+$nodePath = "C:\Program Files\nodejs"
+
+if ((Test-Path $nodePath) -and ($systemPath -notlike "*$nodePath*")) {
+    $systemPath = "$systemPath;$nodePath"
+    [Environment]::SetEnvironmentVariable("Path", $systemPath, "Machine")
+}
+
+Write-Host "  [OK] PowerShell ExecutionPolicy configured to Bypass (LocalMachine)." -ForegroundColor Green
+
 try {
     $Action = New-ScheduledTaskAction -Execute "$RunnerDir\gitea-runner.exe" -Argument "daemon --config `"$RunnerDir\config.yaml`"" -WorkingDirectory $RunnerDir
     $Trigger = New-ScheduledTaskTrigger -AtStartup
@@ -164,15 +180,6 @@ try {
     Write-Host "  -> Fallback: Menjalankan daemon secara langsung di background..." -ForegroundColor Yellow
     Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
 }
-
-# Pasang startup shortcut di Common Startup sebagai cadangan
-try {
-    $startupDir = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
-    if (Test-Path $startupDir) {
-        $startupBat = "@echo off`r`ntasklist /FI `"IMAGENAME eq gitea-runner.exe`" 2>NUL | find /I /N `"gitea-runner.exe`" >NUL || start `"`" /min `"$RunnerDir\gitea-runner.exe`" daemon --config `"$RunnerDir\config.yaml`""
-        Set-Content -Path "$startupDir\run-gitea-runner.bat" -Value $startupBat -Force
-    }
-} catch {}
 Write-Host ""
 
 # ---------------------------------------------------------
