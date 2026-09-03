@@ -183,9 +183,9 @@ try {
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 5: Pasang Paket dan Toolchain (GitHub Actions Suite)
+# STEP 5: Pasang Paket dan Toolchain Inti (Git, Node.js, dll)
 # ---------------------------------------------------------
-Write-Host "[5/5] Memasang Toolchain Pengembang Lengkap (GitHub Actions Suite)..." -ForegroundColor Cyan
+Write-Host "[5/5] Memasang Toolchain Inti Runner (Git, 7-Zip, PowerShell Core, Node.js)..." -ForegroundColor Cyan
 
 if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
     Write-Host "  -> Memasang Chocolatey package manager..." -ForegroundColor Gray
@@ -200,29 +200,13 @@ if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
 }
 
 if (Get-Command "choco" -ErrorAction SilentlyContinue) {
-    # 1. Core CLI dan Utilities (Git, 7-Zip, PowerShell Core)
-    Write-Host "  -> [1/5] Memasang Git, 7-Zip, PowerShell Core..." -ForegroundColor Yellow
-    choco install -y git 7zip.install powershell-core --no-progress
-
-    # 2. Web Runtimes dan Package Managers (Node.js, npm, yarn, pnpm, Python)
-    Write-Host "  -> [2/5] Memasang Node.js LTS, Yarn, Pnpm, Python 3..." -ForegroundColor Yellow
-    choco install -y nodejs-lts yarn pnpm python3 --no-progress
-
-    # 3. Compilers dan SDKs (.NET SDK, Go, Java 17 Temurin)
-    Write-Host "  -> [3/5] Memasang .NET SDK, Golang, Java 17 Temurin..." -ForegroundColor Yellow
-    choco install -y dotnet-sdk golang temurin17 --no-progress
-
-    # 4. Build Tools (CMake, Ninja)
-    Write-Host "  -> [4/5] Memasang CMake, Ninja..." -ForegroundColor Yellow
-    choco install -y cmake ninja --no-progress
-
-    # 5. Visual Studio 2022 MSBuild Tools
-    Write-Host "  -> [5/5] Memasang Visual Studio 2022 MSBuild Tools..." -ForegroundColor Yellow
-    choco install -y visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.MSBuildTools --quiet" --no-progress
+    # Pasang Git, 7-Zip, PowerShell Core, dan Node.js LTS (termasuk npm & npx)
+    Write-Host "  -> Memasang Git, 7-Zip, PowerShell Core, Node.js LTS..." -ForegroundColor Yellow
+    choco install -y git 7zip.install powershell-core nodejs-lts --no-progress
 
     # Refresh Environment PATH
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
-    Write-Host "  [OK] Seluruh paket toolchain berhasil dipasang!" -ForegroundColor Green
+    Write-Host "  [OK] Seluruh paket inti berhasil dipasang!" -ForegroundColor Green
 }
 Write-Host ""
 
