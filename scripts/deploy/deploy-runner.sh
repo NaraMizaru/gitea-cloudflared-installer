@@ -2,6 +2,17 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+STACK_DIR="/opt/stacks/runner"
+
+# Load environment file jika ada
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
 # Fallback untuk kompatibilitas konfigurasi
 export RUNNER_TYPE="${RUNNER_TYPE:-linux}"
 export LINUX_RUNNER_NAME="${LINUX_RUNNER_NAME:-${RUNNER_NAME:-gitea-runner-linux}}"
@@ -40,10 +51,6 @@ case "$RUNNER_TYPE" in
         fi
         ;;
 esac
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-STACK_DIR="/opt/stacks/runner"
 
 mkdir -p "$STACK_DIR"
 
@@ -113,13 +120,7 @@ if [ "$RUNNER_TYPE" = "windows" ] || [ "$RUNNER_TYPE" = "windows-vm" ] || [ "$RU
     ACTUAL_RUNNER_NAME="${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}"
     ACTUAL_LABELS="${WINDOWS_RUNNER_LABELS:-windows:host,windows-msbuild:host,windows-latest:host}"
 
-    # Injeksi langsung ke install.ps1 agar variabel pasti terisi
-    sed -i "s|\$GiteaUrl = \$null|\$GiteaUrl = \"${ACTUAL_GITEA_URL}\"|g" "$STACK_DIR/oem/install.ps1"
-    sed -i "s|\$Token = \$null|\$Token = \"${ACTUAL_TOKEN}\"|g" "$STACK_DIR/oem/install.ps1"
-    sed -i "s|\$RunnerName = \$null|\$RunnerName = \"${ACTUAL_RUNNER_NAME}\"|g" "$STACK_DIR/oem/install.ps1"
-    sed -i "s|\$Labels = \$null|\$Labels = \"${ACTUAL_LABELS}\"|g" "$STACK_DIR/oem/install.ps1"
-
-    # Generate runner-env.ps1 sebagai cadangan
+    # Generate runner-env.ps1 dengan token dan domain sebenarnya
     cat <<EOF > "$STACK_DIR/oem/runner-env.ps1"
 \$GiteaUrl = "${ACTUAL_GITEA_URL}"
 \$Token = "${ACTUAL_TOKEN}"
@@ -130,6 +131,12 @@ EOF
     # Salin template config windows ke oem
     if [ -f "$PROJECT_ROOT/compose/runner/config.windows-vm.yaml" ]; then
         cp "$PROJECT_ROOT/compose/runner/config.windows-vm.yaml" "$STACK_DIR/oem/config.windows-vm.yaml"
+    fi
+
+    # Pre-download binary gitea-runner.exe ke folder OEM agar VM tidak perlu download dari internet
+    if [ ! -f "$STACK_DIR/oem/gitea-runner.exe" ]; then
+        echo "Mengunduh binary gitea-runner.exe untuk disuntikkan ke Windows VM..."
+        curl -fsSL --connect-timeout 10 -m 120 "https://gitea.com/gitea/runner/releases/download/v3.3.2/gitea-runner-3.3.2-windows-amd64.exe" -o "$STACK_DIR/oem/gitea-runner.exe" 2>/dev/null || rm -f "$STACK_DIR/oem/gitea-runner.exe"
     fi
 
     # Cek ketersediaan KVM

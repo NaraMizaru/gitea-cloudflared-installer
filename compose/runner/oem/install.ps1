@@ -5,7 +5,6 @@ try {
     Start-Transcript -Path $LogFile -Append -ErrorAction SilentlyContinue
 } catch {}
 
-Clear-Host
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "       GITEA WINDOWS RUNNER AUTOMATIC PROVISIONING          " -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -22,15 +21,35 @@ $Token = $null
 $RunnerName = $null
 $Labels = $null
 
-if (Test-Path "C:\oem\runner-env.ps1") {
-    Write-Host "  -> Menemukan C:\oem\runner-env.ps1. Memuat variabel..." -ForegroundColor Green
-    . "C:\oem\runner-env.ps1"
-} else {
-    Write-Host "  -> C:\oem\runner-env.ps1 tidak ditemukan, mencoba environment variable..." -ForegroundColor Yellow
+# Cari file env di berbagai lokasi potensial
+$envCandidates = @(
+    "$PSScriptRoot\runner-env.ps1",
+    "C:\oem\runner-env.ps1",
+    "C:\OEM\runner-env.ps1"
+)
+
+$foundEnv = $null
+foreach ($f in $envCandidates) {
+    if (Test-Path $f) {
+        $foundEnv = $f
+        break
+    }
 }
 
+if ($foundEnv) {
+    Write-Host "  -> Memuat konfigurasi dari: $foundEnv" -ForegroundColor Green
+    . $foundEnv
+} else {
+    Write-Host "  -> runner-env.ps1 tidak ditemukan, mencoba environment variable..." -ForegroundColor Yellow
+}
+
+# Fallback ke environment variable container jika belum terisi
 if (-not $GiteaUrl) { $GiteaUrl = $env:GITEA_INSTANCE_URL }
-if (-not $Token) { $Token = if ($env:WINDOWS_RUNNER_TOKEN) { $env:WINDOWS_RUNNER_TOKEN } elseif ($env:GITEA_RUNNER_REGISTRATION_TOKEN) { $env:GITEA_RUNNER_REGISTRATION_TOKEN } else { $env:RUNNER_TOKEN } }
+if (-not $Token) {
+    if ($env:WINDOWS_RUNNER_TOKEN) { $Token = $env:WINDOWS_RUNNER_TOKEN }
+    elseif ($env:GITEA_RUNNER_REGISTRATION_TOKEN) { $Token = $env:GITEA_RUNNER_REGISTRATION_TOKEN }
+    elseif ($env:RUNNER_TOKEN) { $Token = $env:RUNNER_TOKEN }
+}
 if (-not $RunnerName) { $RunnerName = if ($env:GITEA_RUNNER_NAME) { $env:GITEA_RUNNER_NAME } else { "gitea-runner-windows-vm" } }
 if (-not $Labels) { $Labels = if ($env:GITEA_RUNNER_LABELS) { $env:GITEA_RUNNER_LABELS } else { "windows:host,windows-msbuild:host,windows-latest:host" } }
 
@@ -45,9 +64,9 @@ if ($Token) {
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 2: Download Gitea Runner
+# STEP 2: Siapkan Binary Gitea Runner
 # ---------------------------------------------------------
-Write-Host "[2/5] Menyiapkan Direktori & Mengunduh Gitea Runner..." -ForegroundColor Cyan
+Write-Host "[2/5] Menyiapkan Direktori & Binary Gitea Runner..." -ForegroundColor Cyan
 $RunnerDir = "C:\actions-runner"
 if (-not (Test-Path -Path $RunnerDir)) {
     New-Item -ItemType Directory -Force -Path $RunnerDir | Out-Null
@@ -55,15 +74,23 @@ if (-not (Test-Path -Path $RunnerDir)) {
 
 Set-Location $RunnerDir
 
+# Cek apakah binary sudah ada dari C:\OEM (pre-downloaded dari host)
+$oemBinary = @("C:\oem\gitea-runner.exe", "C:\OEM\gitea-runner.exe", "$PSScriptRoot\gitea-runner.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+
 if (-not (Test-Path -Path "$RunnerDir\gitea-runner.exe")) {
-    $RunnerVersion = "3.3.2"
-    $RunnerUrl = "https://gitea.com/gitea/runner/releases/download/v$RunnerVersion/gitea-runner-$RunnerVersion-windows-amd64.exe"
-    Write-Host "  -> Mengunduh gitea-runner v$RunnerVersion dari GitHub/Gitea..." -ForegroundColor Gray
-    try {
-        Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\gitea-runner.exe"
-        Write-Host "  -> gitea-runner.exe berhasil diunduh ke $RunnerDir" -ForegroundColor Green
-    } catch {
-        Write-Host "  -> [ERROR] Gagal mengunduh gitea-runner.exe: $_" -ForegroundColor Red
+    if ($oemBinary) {
+        Write-Host "  -> Menyalin gitea-runner.exe dari $oemBinary..." -ForegroundColor Green
+        Copy-Item -Path $oemBinary -Destination "$RunnerDir\gitea-runner.exe" -Force
+    } else {
+        $RunnerVersion = "3.3.2"
+        $RunnerUrl = "https://gitea.com/gitea/runner/releases/download/v$RunnerVersion/gitea-runner-$RunnerVersion-windows-amd64.exe"
+        Write-Host "  -> Mengunduh gitea-runner v$RunnerVersion dari internet..." -ForegroundColor Gray
+        try {
+            Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\gitea-runner.exe"
+            Write-Host "  ✔ gitea-runner.exe berhasil diunduh ke $RunnerDir" -ForegroundColor Green
+        } catch {
+            Write-Host "  ✘ [ERROR] Gagal mengunduh gitea-runner.exe: $_" -ForegroundColor Red
+        }
     }
 } else {
     Write-Host "  -> gitea-runner.exe sudah tersedia di $RunnerDir" -ForegroundColor Green
@@ -73,12 +100,14 @@ Write-Host ""
 # ---------------------------------------------------------
 # STEP 3: Generate Config & Register Runner
 # ---------------------------------------------------------
-Write-Host "[3/5] Registrasi Runner ke Gitea..." -ForegroundColor Cyan
+Write-Host "[3/5] Konfigurasi & Registrasi Runner ke Gitea..." -ForegroundColor Cyan
+
+$configTemplate = @("C:\oem\config.windows-vm.yaml", "C:\OEM\config.windows-vm.yaml", "$PSScriptRoot\config.windows-vm.yaml") | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if (-not (Test-Path -Path "$RunnerDir\config.yaml")) {
-    if (Test-Path -Path "C:\oem\config.windows-vm.yaml") {
-        Write-Host "  -> Menyalin template konfigurasi config.windows-vm.yaml..." -ForegroundColor Gray
-        Copy-Item -Path "C:\oem\config.windows-vm.yaml" -Destination "$RunnerDir\config.yaml" -Force
+    if ($configTemplate) {
+        Write-Host "  -> Menyalin template konfigurasi dari $configTemplate..." -ForegroundColor Gray
+        Copy-Item -Path $configTemplate -Destination "$RunnerDir\config.yaml" -Force
     } else {
         Write-Host "  -> Men-generate konfigurasi default config.yaml..." -ForegroundColor Gray
         .\gitea-runner.exe generate-config > "$RunnerDir\config.yaml"
@@ -87,13 +116,29 @@ if (-not (Test-Path -Path "$RunnerDir\config.yaml")) {
 
 if (-not (Test-Path -Path "$RunnerDir\.runner")) {
     if ($GiteaUrl -and $Token) {
-        Write-Host "  -> Mendaftarkan runner ke instance Gitea..." -ForegroundColor Yellow
-        $regOutput = .\gitea-runner.exe register --no-interactive --instance $GiteaUrl --token $Token --name $RunnerName --labels $Labels 2>&1
-        Write-Host "     $regOutput" -ForegroundColor Gray
-        if (Test-Path -Path "$RunnerDir\.runner") {
-            Write-Host "  ✔ Registrasi BERHASIL! File .runner berhasil dibuat." -ForegroundColor Green
-        } else {
-            Write-Host "  ✘ Registrasi GAGAL. Periksa kembali token Anda." -ForegroundColor Red
+        $maxRetries = 6
+        $retryCount = 0
+        $registered = $false
+
+        while (-not $registered -and $retryCount -lt $maxRetries) {
+            $retryCount++
+            Write-Host "  -> Mendaftarkan runner ke instance Gitea (Percobaan $retryCount/$maxRetries)..." -ForegroundColor Yellow
+            $regOutput = .\gitea-runner.exe register --no-interactive --instance $GiteaUrl --token $Token --name $RunnerName --labels $Labels 2>&1
+            Write-Host "     $regOutput" -ForegroundColor Gray
+            
+            if (Test-Path -Path "$RunnerDir\.runner") {
+                $registered = $true
+                Write-Host "  ✔ Registrasi BERHASIL! File .runner berhasil dibuat." -ForegroundColor Green
+            } else {
+                if ($retryCount -lt $maxRetries) {
+                    Write-Host "  [!] Registrasi belum berhasil, menunggu 5 detik sebelum mencoba lagi..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds 5
+                }
+            }
+        }
+
+        if (-not $registered) {
+            Write-Host "  ✘ Registrasi GAGAL setelah $maxRetries percobaan. Periksa token atau koneksi ke $GiteaUrl." -ForegroundColor Red
         }
     } else {
         Write-Host "  [!] Melewati registrasi: URL Gitea atau Token belum diisi." -ForegroundColor Yellow
@@ -111,47 +156,60 @@ try {
     $Action = New-ScheduledTaskAction -Execute "$RunnerDir\gitea-runner.exe" -Argument "daemon --config `"$RunnerDir\config.yaml`"" -WorkingDirectory $RunnerDir
     $Trigger = New-ScheduledTaskTrigger -AtStartup
     $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+    Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
     Start-ScheduledTask -TaskName "GiteaRunner"
     Write-Host "  ✔ Service Task 'GiteaRunner' berhasil dipasang dan dijalankan!" -ForegroundColor Green
 } catch {
-    Write-Host "  -> Fallback: Menjalankan daemon secara langsung..." -ForegroundColor Yellow
+    Write-Host "  -> Fallback: Menjalankan daemon secara langsung di background..." -ForegroundColor Yellow
     Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
 }
+
+# Pasang startup shortcut di Common Startup sebagai cadangan
+try {
+    $startupDir = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
+    if (Test-Path $startupDir) {
+        $startupBat = "@echo off`r`nstart `"`" /min `"$RunnerDir\gitea-runner.exe`" daemon --config `"$RunnerDir\config.yaml`""
+        Set-Content -Path "$startupDir\run-gitea-runner.bat" -Value $startupBat -Force
+    }
+} catch {}
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 5: Pasang Alat Tambahan (Git, Node, Python)
+# STEP 5: Pasang Git (Wajib untuk Runner Actions)
 # ---------------------------------------------------------
-Write-Host "[5/5] Memasang Alat Pengembang Pendukung (Git, Node.js, Python)..." -ForegroundColor Cyan
+Write-Host "[5/5] Memasang Git untuk Runner..." -ForegroundColor Cyan
 
-if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
-    Write-Host "  -> Memasang Chocolatey package manager..." -ForegroundColor Gray
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-    try {
-        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        $env:Path += ";C:\ProgramData\chocolatey\bin"
-        Write-Host "  ✔ Chocolatey terpasang." -ForegroundColor Green
-    } catch {
-        Write-Host "  [!] Peringatan: Gagal memasang Chocolatey: $_" -ForegroundColor Yellow
+if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) {
+    if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
+        Write-Host "  -> Memasang Chocolatey package manager..." -ForegroundColor Gray
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        try {
+            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+            $env:Path += ";C:\ProgramData\chocolatey\bin"
+            Write-Host "  ✔ Chocolatey terpasang." -ForegroundColor Green
+        } catch {
+            Write-Host "  [!] Gagal memasang Chocolatey: $_" -ForegroundColor Yellow
+        }
     }
-}
 
-if (Get-Command "choco" -ErrorAction SilentlyContinue) {
-    Write-Host "  -> Memasang Git, PowerShell Core, Node.js, & Python via Chocolatey..." -ForegroundColor Gray
-    choco install -y git powershell-core nodejs-lts python3 --no-progress
-    
-    $env:Path += ";C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;C:\Program Files\nodejs;C:\Python312"
-    [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
-    Write-Host "  ✔ Alat pendukung selesai dipasang!" -ForegroundColor Green
+    if (Get-Command "choco" -ErrorAction SilentlyContinue) {
+        Write-Host "  -> Memasang Git via Chocolatey..." -ForegroundColor Gray
+        choco install -y git --no-progress
+        
+        $env:Path += ";C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin"
+        [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
+        Write-Host "  ✔ Git berhasil dipasang!" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  -> Git sudah terpasang." -ForegroundColor Green
 }
 Write-Host ""
 
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host "  ✔ SETUP GITEA WINDOWS RUNNER SELESAI DENGAN SUKSES!       " -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host "Status runner saat ini aktif. Anda dapat memantau Web Gitea." -ForegroundColor Cyan
-Write-Host "Jendela ini dibiarkan terbuka agar Anda dapat meninjau log instalasi." -ForegroundColor Gray
+Write-Host "Runner sekarang aktif dan siap menerima job dari Gitea." -ForegroundColor Cyan
 Write-Host ""
 
 try {

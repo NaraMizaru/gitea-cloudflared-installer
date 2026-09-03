@@ -126,7 +126,9 @@ reset-runner: ## Hentikan & hapus seluruh data runner (Linux & Windows VM) untuk
 	@[ -f /opt/stacks/runner/docker-compose.yml ] && docker compose -f /opt/stacks/runner/docker-compose.yml down -v 2>/dev/null || true
 	@docker rm -f gitea-runner-linux gitea-runner-windows gitea-runner-windows-vm 2>/dev/null || true
 	@echo "Membersihkan folder data runner..."
-	@sudo rm -rf /srv/data/runner-linux /srv/data/runner-windows-vm /opt/stacks/runner/oem
+	@DATA_PATH=$$(grep -E '^DATA_DIR=' .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'"); \
+	DATA_PATH=$${DATA_PATH:-/srv/data}; \
+	sudo rm -rf "$$DATA_PATH/runner-linux" "$$DATA_PATH/runner-windows-vm" /opt/stacks/runner/oem
 	@echo "Data runner berhasil dibersihkan dan siap dideploy ulang!"
 
 setup-ssh: ## Jalankan panduan konfigurasi SSH client
