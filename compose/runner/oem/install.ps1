@@ -169,7 +169,7 @@ try {
 try {
     $startupDir = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup"
     if (Test-Path $startupDir) {
-        $startupBat = "@echo off`r`nstart `"`" /min `"$RunnerDir\gitea-runner.exe`" daemon --config `"$RunnerDir\config.yaml`""
+        $startupBat = "@echo off`r`ntasklist /FI `"IMAGENAME eq gitea-runner.exe`" 2>NUL | find /I /N `"gitea-runner.exe`" >NUL || start `"`" /min `"$RunnerDir\gitea-runner.exe`" daemon --config `"$RunnerDir\config.yaml`""
         Set-Content -Path "$startupDir\run-gitea-runner.bat" -Value $startupBat -Force
     }
 } catch {}
