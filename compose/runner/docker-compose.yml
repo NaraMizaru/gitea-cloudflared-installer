@@ -22,6 +22,7 @@ services:
     image: dockurr/windows:latest
     container_name: ${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}
     restart: unless-stopped
+    stop_grace_period: 2m
     devices:
       - /dev/kvm
     cap_add:
@@ -40,7 +41,7 @@ services:
       GITEA_RUNNER_REGISTRATION_TOKEN: "${WINDOWS_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
       GITEA_RUNNER_LABELS: "${WINDOWS_RUNNER_LABELS:-windows:host,windows-msbuild:host,windows-latest:host}"
     volumes:
-      - ${DATA_DIR}/runner-windows-vm:/storage
+      - ${DATA_DIR:-/srv/data}/runner-windows-vm:/storage
       - ./oem:/oem
     profiles:
       - windows

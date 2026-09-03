@@ -28,6 +28,10 @@ export WINDOWS_VM_DISK_SIZE="${WINDOWS_VM_DISK_SIZE:-64G}"
 export WINDOWS_VM_VERSION="${WINDOWS_VM_VERSION:-2022}"
 export WINDOWS_VM_VNC_PORT="${WINDOWS_VM_VNC_PORT:-127.0.0.1:8006}"
 
+export DATA_DIR="${DATA_DIR:-/srv/data}"
+export DOCKER_NETWORK="${DOCKER_NETWORK:-git-network}"
+export DOMAIN="${DOMAIN:-localhost}"
+
 # Validasi token sesuai RUNNER_TYPE yang dipilih
 case "$RUNNER_TYPE" in
     linux)
