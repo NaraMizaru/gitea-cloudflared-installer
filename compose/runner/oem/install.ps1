@@ -176,33 +176,46 @@ try {
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 5: Pasang Git (Wajib untuk Runner Actions)
+# STEP 5: Pasang Paket dan Toolchain (GitHub Actions Suite)
 # ---------------------------------------------------------
-Write-Host "[5/5] Memasang Git untuk Runner..." -ForegroundColor Cyan
+Write-Host "[5/5] Memasang Toolchain Pengembang Lengkap (GitHub Actions Suite)..." -ForegroundColor Cyan
 
-if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) {
-    if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
-        Write-Host "  -> Memasang Chocolatey package manager..." -ForegroundColor Gray
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        try {
-            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-            $env:Path += ";C:\ProgramData\chocolatey\bin"
-            Write-Host "  [OK] Chocolatey terpasang." -ForegroundColor Green
-        } catch {
-            Write-Host "  [!] Gagal memasang Chocolatey: $_" -ForegroundColor Yellow
-        }
+if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
+    Write-Host "  -> Memasang Chocolatey package manager..." -ForegroundColor Gray
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    try {
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        $env:Path += ";C:\ProgramData\chocolatey\bin"
+        Write-Host "  [OK] Chocolatey terpasang." -ForegroundColor Green
+    } catch {
+        Write-Host "  [!] Gagal memasang Chocolatey: $_" -ForegroundColor Yellow
     }
+}
 
-    if (Get-Command "choco" -ErrorAction SilentlyContinue) {
-        Write-Host "  -> Memasang Git via Chocolatey..." -ForegroundColor Gray
-        choco install -y git --no-progress
-        
-        $env:Path += ";C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin"
-        [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
-        Write-Host "  [OK] Git berhasil dipasang!" -ForegroundColor Green
-    }
-} else {
-    Write-Host "  -> Git sudah terpasang." -ForegroundColor Green
+if (Get-Command "choco" -ErrorAction SilentlyContinue) {
+    # 1. Core CLI dan Utilities (Git, 7-Zip, PowerShell Core)
+    Write-Host "  -> [1/5] Memasang Git, 7-Zip, PowerShell Core..." -ForegroundColor Yellow
+    choco install -y git 7zip.install powershell-core --no-progress
+
+    # 2. Web Runtimes dan Package Managers (Node.js, npm, yarn, pnpm, Python)
+    Write-Host "  -> [2/5] Memasang Node.js LTS, Yarn, Pnpm, Python 3..." -ForegroundColor Yellow
+    choco install -y nodejs-lts yarn pnpm python3 --no-progress
+
+    # 3. Compilers dan SDKs (.NET SDK, Go, Java 17 Temurin)
+    Write-Host "  -> [3/5] Memasang .NET SDK, Golang, Java 17 Temurin..." -ForegroundColor Yellow
+    choco install -y dotnet-sdk golang temurin17 --no-progress
+
+    # 4. Build Tools (CMake, Ninja)
+    Write-Host "  -> [4/5] Memasang CMake, Ninja..." -ForegroundColor Yellow
+    choco install -y cmake ninja --no-progress
+
+    # 5. Visual Studio 2022 MSBuild Tools
+    Write-Host "  -> [5/5] Memasang Visual Studio 2022 MSBuild Tools..." -ForegroundColor Yellow
+    choco install -y visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.MSBuildTools --quiet" --no-progress
+
+    # Refresh Environment PATH
+    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+    Write-Host "  [OK] Seluruh paket toolchain berhasil dipasang!" -ForegroundColor Green
 }
 Write-Host ""
 

@@ -11,6 +11,9 @@ runner:
     - "windows:host"
     - "windows-msbuild:host"
     - "windows-latest:host"
+    - "windows-2022:host"
+    - "windows-node:host"
+    - "windows-dotnet:host"
 
 cache:
   enabled: true
