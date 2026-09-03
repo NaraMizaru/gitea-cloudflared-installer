@@ -109,10 +109,21 @@ Karena Gitea Runner memerlukan token registrasi dari web UI Gitea, jalankan inst
    WINDOWS_RUNNER_NAME=gitea-runner-windows-vm
    WINDOWS_RUNNER_LABELS=windows:host,windows-msbuild:host,windows-latest:host
    WINDOWS_RUNNER_TOKEN=KODE_TOKEN_WINDOWS_RUNNER
+   # Port VNC (127.0.0.1:8006 untuk aman via SSH Tunnel, atau 8006 untuk publik)
+   WINDOWS_VM_VNC_PORT=127.0.0.1:8006
 
    # (Opsional) Fallback jika menggunakan 1 token yang sama
    # RUNNER_TOKEN=KODE_TOKEN_RUNNER
    ```
+
+   > [!TIP]
+   > **Keamanan Akses VNC Windows (Port 8006)**:
+   > Secara bawaan `WINDOWS_VM_VNC_PORT=127.0.0.1:8006` dikunci hanya untuk `localhost` agar aman dari internet.
+   > Untuk melihat layar Windows dari PC/laptop lokal Anda, buat SSH Tunnel:
+   > ```bash
+   > ssh -L 8006:localhost:8006 user@ip-server
+   > ```
+   > Lalu buka `http://localhost:8006` di browser laptop Anda. Jika ingin membukanya langsung secara publik, ubah menjadi `WINDOWS_VM_VNC_PORT=8006`.
 6. Jalankan deployment khusus untuk mengaktifkan **Gitea Runner**:
    ```bash
    ./install.sh --runner
