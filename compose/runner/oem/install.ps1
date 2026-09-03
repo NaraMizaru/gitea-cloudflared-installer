@@ -8,13 +8,13 @@ try {
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "       GITEA WINDOWS RUNNER AUTOMATIC PROVISIONING          " -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "Tanggal & Waktu: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
+Write-Host "Waktu: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 1: Muat Konfigurasi & Injeksi Token
+# STEP 1: Muat Konfigurasi dan Injeksi Token
 # ---------------------------------------------------------
-Write-Host "[1/5] Membaca Konfigurasi & Token Gitea..." -ForegroundColor Cyan
+Write-Host "[1/5] Membaca Konfigurasi dan Token Gitea..." -ForegroundColor Cyan
 
 $GiteaUrl = $null
 $Token = $null
@@ -66,7 +66,7 @@ Write-Host ""
 # ---------------------------------------------------------
 # STEP 2: Siapkan Binary Gitea Runner
 # ---------------------------------------------------------
-Write-Host "[2/5] Menyiapkan Direktori & Binary Gitea Runner..." -ForegroundColor Cyan
+Write-Host "[2/5] Menyiapkan Direktori dan Binary Gitea Runner..." -ForegroundColor Cyan
 $RunnerDir = "C:\actions-runner"
 if (-not (Test-Path -Path $RunnerDir)) {
     New-Item -ItemType Directory -Force -Path $RunnerDir | Out-Null
@@ -87,9 +87,9 @@ if (-not (Test-Path -Path "$RunnerDir\gitea-runner.exe")) {
         Write-Host "  -> Mengunduh gitea-runner v$RunnerVersion dari internet..." -ForegroundColor Gray
         try {
             Invoke-WebRequest -Uri $RunnerUrl -OutFile "$RunnerDir\gitea-runner.exe"
-            Write-Host "  ✔ gitea-runner.exe berhasil diunduh ke $RunnerDir" -ForegroundColor Green
+            Write-Host "  [OK] gitea-runner.exe berhasil diunduh ke $RunnerDir" -ForegroundColor Green
         } catch {
-            Write-Host "  ✘ [ERROR] Gagal mengunduh gitea-runner.exe: $_" -ForegroundColor Red
+            Write-Host "  [FAIL] Gagal mengunduh gitea-runner.exe: $_" -ForegroundColor Red
         }
     }
 } else {
@@ -98,9 +98,9 @@ if (-not (Test-Path -Path "$RunnerDir\gitea-runner.exe")) {
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 3: Generate Config & Register Runner
+# STEP 3: Generate Config dan Register Runner
 # ---------------------------------------------------------
-Write-Host "[3/5] Konfigurasi & Registrasi Runner ke Gitea..." -ForegroundColor Cyan
+Write-Host "[3/5] Konfigurasi dan Registrasi Runner ke Gitea..." -ForegroundColor Cyan
 
 $configTemplate = @("C:\oem\config.windows-vm.yaml", "C:\OEM\config.windows-vm.yaml", "$PSScriptRoot\config.windows-vm.yaml") | Where-Object { Test-Path $_ } | Select-Object -First 1
 
@@ -128,7 +128,7 @@ if (-not (Test-Path -Path "$RunnerDir\.runner")) {
             
             if (Test-Path -Path "$RunnerDir\.runner") {
                 $registered = $true
-                Write-Host "  ✔ Registrasi BERHASIL! File .runner berhasil dibuat." -ForegroundColor Green
+                Write-Host "  [OK] Registrasi BERHASIL! File .runner berhasil dibuat." -ForegroundColor Green
             } else {
                 if ($retryCount -lt $maxRetries) {
                     Write-Host "  [!] Registrasi belum berhasil, menunggu 5 detik sebelum mencoba lagi..." -ForegroundColor Yellow
@@ -138,7 +138,7 @@ if (-not (Test-Path -Path "$RunnerDir\.runner")) {
         }
 
         if (-not $registered) {
-            Write-Host "  ✘ Registrasi GAGAL setelah $maxRetries percobaan. Periksa token atau koneksi ke $GiteaUrl." -ForegroundColor Red
+            Write-Host "  [FAIL] Registrasi GAGAL setelah $maxRetries percobaan. Periksa token atau koneksi ke $GiteaUrl." -ForegroundColor Red
         }
     } else {
         Write-Host "  [!] Melewati registrasi: URL Gitea atau Token belum diisi." -ForegroundColor Yellow
@@ -149,7 +149,7 @@ if (-not (Test-Path -Path "$RunnerDir\.runner")) {
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 4: Pasang & Jalankan Service Windows
+# STEP 4: Pasang dan Jalankan Service Windows
 # ---------------------------------------------------------
 Write-Host "[4/5] Memasang Service Background Runner (Windows Startup Task)..." -ForegroundColor Cyan
 try {
@@ -159,7 +159,7 @@ try {
     $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
     Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
     Start-ScheduledTask -TaskName "GiteaRunner"
-    Write-Host "  ✔ Service Task 'GiteaRunner' berhasil dipasang dan dijalankan!" -ForegroundColor Green
+    Write-Host "  [OK] Service Task 'GiteaRunner' berhasil dipasang dan dijalankan!" -ForegroundColor Green
 } catch {
     Write-Host "  -> Fallback: Menjalankan daemon secara langsung di background..." -ForegroundColor Yellow
     Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
@@ -187,7 +187,7 @@ if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) {
         try {
             Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
             $env:Path += ";C:\ProgramData\chocolatey\bin"
-            Write-Host "  ✔ Chocolatey terpasang." -ForegroundColor Green
+            Write-Host "  [OK] Chocolatey terpasang." -ForegroundColor Green
         } catch {
             Write-Host "  [!] Gagal memasang Chocolatey: $_" -ForegroundColor Yellow
         }
@@ -199,7 +199,7 @@ if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) {
         
         $env:Path += ";C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin"
         [Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
-        Write-Host "  ✔ Git berhasil dipasang!" -ForegroundColor Green
+        Write-Host "  [OK] Git berhasil dipasang!" -ForegroundColor Green
     }
 } else {
     Write-Host "  -> Git sudah terpasang." -ForegroundColor Green
@@ -207,7 +207,7 @@ if (-not (Get-Command "git" -ErrorAction SilentlyContinue)) {
 Write-Host ""
 
 Write-Host "============================================================" -ForegroundColor Green
-Write-Host "  ✔ SETUP GITEA WINDOWS RUNNER SELESAI DENGAN SUKSES!       " -ForegroundColor Green
+Write-Host "  [OK] SETUP GITEA WINDOWS RUNNER SELESAI DENGAN SUKSES!    " -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host "Runner sekarang aktif dan siap menerima job dari Gitea." -ForegroundColor Cyan
 Write-Host ""
