@@ -166,6 +166,19 @@ if ((Test-Path $nodePath) -and ($systemPath -notlike "*$nodePath*")) {
     [Environment]::SetEnvironmentVariable("Path", $systemPath, "Machine")
 }
 
+# FIX 3: Pastikan host.docker.internal mengarah ke Host Gateway untuk bypass Cloudflare
+try {
+    $gateway = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop
+    if ($gateway) {
+        $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
+        $hostsContent = Get-Content $hostsFile -Raw -ErrorAction SilentlyContinue
+        if ($hostsContent -notlike "*host.docker.internal*") {
+            Add-Content -Path $hostsFile -Value "`r`n$gateway host.docker.internal" -Force
+            Write-Host "  [OK] host.docker.internal mapped to host gateway ($gateway)." -ForegroundColor Green
+        }
+    }
+} catch {}
+
 Write-Host "  [OK] PowerShell ExecutionPolicy configured to Bypass (LocalMachine)." -ForegroundColor Green
 
 try {
