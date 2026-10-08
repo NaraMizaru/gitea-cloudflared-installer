@@ -11,6 +11,7 @@ runner:
     - "windows:host"
     - "windows-latest:host"
     - "windows-node:host"
+    - "windows-msys2:host"
     - "windows-2022:host"
 
 cache:

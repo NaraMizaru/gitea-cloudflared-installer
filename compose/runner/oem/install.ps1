@@ -200,13 +200,25 @@ if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
 }
 
 if (Get-Command "choco" -ErrorAction SilentlyContinue) {
-    # Pasang Git, 7-Zip, PowerShell Core, dan Node.js LTS (termasuk npm & npx)
-    Write-Host "  -> Memasang Git, 7-Zip, PowerShell Core, Node.js LTS..." -ForegroundColor Yellow
-    choco install -y git 7zip.install powershell-core nodejs-lts --no-progress
+    # Pasang Git, 7-Zip, PowerShell Core, Node.js LTS, dan MSYS2
+    Write-Host "  -> Memasang Git, 7-Zip, PowerShell Core, Node.js LTS, MSYS2..." -ForegroundColor Yellow
+    choco install -y git 7zip.install powershell-core nodejs-lts msys2 --no-progress
+
+    # Konfigurasi link C:\msys64 dan PATH untuk kompatibilitas GitHub Actions
+    if (Test-Path "C:\tools\msys64") {
+        if (-not (Test-Path "C:\msys64")) {
+            cmd /c mklink /J "C:\msys64" "C:\tools\msys64" | Out-Null
+        }
+        $msysBin = "C:\tools\msys64\usr\bin"
+        $currentSysPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+        if ($currentSysPath -notlike "*$msysBin*") {
+            [Environment]::SetEnvironmentVariable("Path", "$currentSysPath;$msysBin", "Machine")
+        }
+    }
 
     # Refresh Environment PATH
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
-    Write-Host "  [OK] Seluruh paket inti berhasil dipasang!" -ForegroundColor Green
+    Write-Host "  [OK] Seluruh paket inti dan MSYS2 berhasil dipasang!" -ForegroundColor Green
 }
 Write-Host ""
 

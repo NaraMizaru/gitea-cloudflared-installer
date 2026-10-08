@@ -20,7 +20,7 @@ export LINUX_RUNNER_LABELS="${LINUX_RUNNER_LABELS:-${RUNNER_LABELS:-ubuntu-lates
 export LINUX_RUNNER_TOKEN="${LINUX_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
 
 export WINDOWS_RUNNER_NAME="${WINDOWS_RUNNER_NAME:-gitea-runner-windows-vm}"
-export WINDOWS_RUNNER_LABELS="${WINDOWS_RUNNER_LABELS:-windows:host,windows-latest:host,windows-node:host}"
+export WINDOWS_RUNNER_LABELS="${WINDOWS_RUNNER_LABELS:-windows:host,windows-latest:host,windows-node:host,windows-msys2:host}"
 export WINDOWS_RUNNER_TOKEN="${WINDOWS_RUNNER_TOKEN:-${RUNNER_TOKEN}}"
 export WINDOWS_VM_RAM_SIZE="${WINDOWS_VM_RAM_SIZE:-4G}"
 export WINDOWS_VM_CPU_CORES="${WINDOWS_VM_CPU_CORES:-2}"
