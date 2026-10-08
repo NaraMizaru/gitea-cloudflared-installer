@@ -34,6 +34,8 @@ services:
       GITEA__database__NAME: ${POSTGRES_DB}
       GITEA__database__USER: ${POSTGRES_USER}
       GITEA__database__PASSWD: ${POSTGRES_PASSWORD}
+      GITEA__attachment__MAX_SIZE: 10240
+      GITEA__repository.upload__FILE_MAX_SIZE: 10240
     ports:
       - "${GITEA_HTTP_PORT}"
       - "${GITEA_SSH_PORT}:22"

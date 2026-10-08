@@ -24,3 +24,12 @@ services:
     volumes:
       - ${DATA_DIR:-/srv/data}/runner-windows-vm:/storage
       - ./oem:/oem
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - git-network
+
+networks:
+  git-network:
+    name: ${DOCKER_NETWORK}
+    external: true
