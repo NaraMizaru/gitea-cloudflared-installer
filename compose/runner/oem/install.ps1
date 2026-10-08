@@ -150,55 +150,9 @@ if (-not (Test-Path -Path "$RunnerDir\.runner")) {
 Write-Host ""
 
 # ---------------------------------------------------------
-# STEP 4: Pasang dan Jalankan Service Windows
+# STEP 4: Pasang Paket dan Toolchain Inti (Git, Node.js, dll)
 # ---------------------------------------------------------
-Write-Host "[4/5] Memasang Service Background Runner (Windows Startup Task)..." -ForegroundColor Cyan
-
-# FIX 1: Izinkan PowerShell menjalankan script workflow secara permanen
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
-
-# FIX 2: Pastikan Node tersedia di SYSTEM PATH
-$systemPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-$nodePath = "C:\Program Files\nodejs"
-
-if ((Test-Path $nodePath) -and ($systemPath -notlike "*$nodePath*")) {
-    $systemPath = "$systemPath;$nodePath"
-    [Environment]::SetEnvironmentVariable("Path", $systemPath, "Machine")
-}
-
-# FIX 3: Pastikan host.docker.internal mengarah ke Host Gateway untuk bypass Cloudflare
-try {
-    $gateway = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop
-    if ($gateway) {
-        $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
-        $hostsContent = Get-Content $hostsFile -Raw -ErrorAction SilentlyContinue
-        if ($hostsContent -notlike "*host.docker.internal*") {
-            Add-Content -Path $hostsFile -Value "`r`n$gateway host.docker.internal" -Force
-            Write-Host "  [OK] host.docker.internal mapped to host gateway ($gateway)." -ForegroundColor Green
-        }
-    }
-} catch {}
-
-Write-Host "  [OK] PowerShell ExecutionPolicy configured to Bypass (LocalMachine)." -ForegroundColor Green
-
-try {
-    $Action = New-ScheduledTaskAction -Execute "$RunnerDir\gitea-runner.exe" -Argument "daemon --config `"$RunnerDir\config.yaml`"" -WorkingDirectory $RunnerDir
-    $Trigger = New-ScheduledTaskTrigger -AtStartup
-    $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-    Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
-    Start-ScheduledTask -TaskName "GiteaRunner"
-    Write-Host "  [OK] Service Task 'GiteaRunner' berhasil dipasang dan dijalankan!" -ForegroundColor Green
-} catch {
-    Write-Host "  -> Fallback: Menjalankan daemon secara langsung di background..." -ForegroundColor Yellow
-    Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
-}
-Write-Host ""
-
-# ---------------------------------------------------------
-# STEP 5: Pasang Paket dan Toolchain Inti (Git, Node.js, dll)
-# ---------------------------------------------------------
-Write-Host "[5/5] Memasang Toolchain Inti Runner (Git, 7-Zip, PowerShell Core, Node.js)..." -ForegroundColor Cyan
+Write-Host "[4/5] Memasang Toolchain Inti Runner (Git, 7-Zip, PowerShell Core, Node.js, MSYS2)..." -ForegroundColor Cyan
 
 if (-not (Get-Command "choco" -ErrorAction SilentlyContinue)) {
     Write-Host "  -> Memasang Chocolatey package manager..." -ForegroundColor Gray
@@ -229,9 +183,56 @@ if (Get-Command "choco" -ErrorAction SilentlyContinue) {
         }
     }
 
-    # Refresh Environment PATH
+    # Pastikan Node.js terdaftar di System PATH
+    $nodePath = "C:\Program Files\nodejs"
+    $currentSysPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    if ((Test-Path $nodePath) -and ($currentSysPath -notlike "*$nodePath*")) {
+        [Environment]::SetEnvironmentVariable("Path", "$currentSysPath;$nodePath", "Machine")
+    }
+
+    # Refresh Environment PATH di proses saat ini
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
     Write-Host "  [OK] Seluruh paket inti dan MSYS2 berhasil dipasang!" -ForegroundColor Green
+}
+Write-Host ""
+
+# ---------------------------------------------------------
+# STEP 5: Pasang dan Jalankan Service Windows
+# ---------------------------------------------------------
+Write-Host "[5/5] Memasang Service Background Runner (Windows Startup Task)..." -ForegroundColor Cyan
+
+# Izinkan PowerShell menjalankan script workflow secara permanen
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
+
+# Pastikan host.docker.internal mengarah ke Host Gateway untuk bypass Cloudflare
+try {
+    $gateway = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop
+    if ($gateway) {
+        $hostsFile = "C:\Windows\System32\drivers\etc\hosts"
+        $hostsContent = Get-Content $hostsFile -Raw -ErrorAction SilentlyContinue
+        if ($hostsContent -notlike "*host.docker.internal*") {
+            Add-Content -Path $hostsFile -Value "`r`n$gateway host.docker.internal" -Force
+            Write-Host "  [OK] host.docker.internal mapped to host gateway ($gateway)." -ForegroundColor Green
+        }
+    }
+} catch {}
+
+Write-Host "  [OK] PowerShell ExecutionPolicy configured to Bypass (LocalMachine)." -ForegroundColor Green
+
+# Refresh Environment PATH sekali lagi sebelum register task
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+
+try {
+    $Action = New-ScheduledTaskAction -Execute "$RunnerDir\gitea-runner.exe" -Argument "daemon --config `"$RunnerDir\config.yaml`"" -WorkingDirectory $RunnerDir
+    $Trigger = New-ScheduledTaskTrigger -AtStartup
+    $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+    Register-ScheduledTask -TaskName "GiteaRunner" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
+    Start-ScheduledTask -TaskName "GiteaRunner"
+    Write-Host "  [OK] Service Task 'GiteaRunner' berhasil dipasang dan dijalankan!" -ForegroundColor Green
+} catch {
+    Write-Host "  -> Fallback: Menjalankan daemon secara langsung di background..." -ForegroundColor Yellow
+    Start-Process "$RunnerDir\gitea-runner.exe" -ArgumentList "daemon", "--config", "$RunnerDir\config.yaml" -WindowStyle Hidden
 }
 Write-Host ""
 

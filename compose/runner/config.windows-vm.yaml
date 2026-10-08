@@ -7,6 +7,8 @@ runner:
   timeout: "3h"
   insecure: false
   fetch_interval: "2s"
+  envs:
+    PATH: "C:\\Program Files\\nodejs;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\tools\\msys64\\usr\\bin;C:\\tools\\msys64\\mingw64\\bin;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\ProgramData\\chocolatey\\bin"
   labels:
     - "windows:host"
     - "windows-latest:host"
